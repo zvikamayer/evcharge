@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const r = await fetch(
       "https://cp.evedge.co.il/api/v1/app/pins?minLatitude=31&maxLatitude=32&minLongitude=34&maxLongitude=35",
-      { cache: "no-store" }
+      { cache: "no-store", headers: { "User-Agent": "okhttp/4.9.3", "Accept": "application/json" } }
     );
     const text = await r.text();
     results.evedge = { status: r.status, body: text.slice(0, 300) };
