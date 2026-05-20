@@ -34,7 +34,7 @@ export default function CheapTable({
   });
 
   return (
-    <div className="absolute top-4 left-4 z-[1000] bg-white rounded-xl shadow-xl w-72 flex flex-col overflow-hidden">
+    <div className="absolute top-2 left-2 right-2 md:top-4 md:left-4 md:right-auto z-[1000] bg-white rounded-xl shadow-xl md:w-72 flex flex-col overflow-hidden">
       {/* Header — always visible */}
       <div
         className="px-4 py-3 bg-blue-50 flex items-center justify-between cursor-pointer select-none"
@@ -50,7 +50,7 @@ export default function CheapTable({
 
       {/* List — hidden when collapsed */}
       {!collapsed && (
-        <div className="overflow-y-auto max-h-[60vh]">
+        <div className="overflow-y-auto max-h-[35vh] md:max-h-[60vh]">
           {sorted.map((s) => {
             const isCheapest = minPrice != null && s.pricePerKwh === minPrice;
             return (
