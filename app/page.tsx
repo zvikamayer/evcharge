@@ -47,49 +47,60 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50" dir="rtl">
+    <div className="flex flex-col h-screen bg-gray-100" dir="rtl">
       {/* Header */}
-      <header className="bg-white shadow-sm px-4 py-3 z-10 space-y-2">
+      <header className="bg-white shadow-md px-4 pt-3 pb-2 z-10 space-y-2.5">
+        {/* Title row */}
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-blue-700">⚡ עמדות טעינה</h1>
-          <div className="flex gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-600 text-white rounded-xl p-1.5 leading-none text-lg">⚡</div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800 leading-tight">עמדות טעינה</h1>
+              <p className="text-xs text-gray-400 leading-none">EV-Edge · GreenSpot</p>
+            </div>
+          </div>
+          {/* Status filters */}
+          <div className="flex gap-1.5">
             <button
               onClick={() => setFilter("all")}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filter === "all" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === "all" ? "bg-gray-800 text-white shadow-sm" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
             >
               הכל
             </button>
             <button
               onClick={() => setFilter("available")}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filter === "available" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600"}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === "available" ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
             >
-              ✅ פנויות
-            </button>
-            <div className="w-px bg-gray-200 self-stretch" />
-            <button
-              onClick={() => setProvider("all")}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${provider === "all" ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-600"}`}
-            >
-              כל החברות
-            </button>
-            <button
-              onClick={() => setProvider("evedge")}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${provider === "evedge" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}
-            >
-              EV-Edge
-            </button>
-            <button
-              onClick={() => setProvider("greenspot")}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${provider === "greenspot" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600"}`}
-            >
-              GreenSpot
+              ✓ פנויות
             </button>
           </div>
         </div>
 
+        {/* Provider filters */}
+        <div className="flex gap-1.5">
+          {[
+            { id: "all", label: "כל החברות" },
+            { id: "evedge", label: "EV-Edge" },
+            { id: "greenspot", label: "GreenSpot" },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setProvider(id)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all border ${
+                provider === id
+                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                  : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Search row */}
         <div className="flex gap-2">
-          <div className="flex flex-1 gap-1">
+          <div className="flex flex-1 items-center gap-1 bg-gray-100 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-blue-400 focus-within:bg-white transition-all">
+            <span className="text-gray-400 text-sm">🔍</span>
             <input
               ref={inputRef}
               type="text"
@@ -97,21 +108,21 @@ export default function Home() {
               onChange={(e) => setAddress(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && searchAddress()}
               placeholder="הכנס כתובת..."
-              className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="flex-1 bg-transparent text-sm focus:outline-none text-gray-700 placeholder-gray-400"
             />
-            <button
-              onClick={searchAddress}
-              disabled={geoLoading}
-              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-            >
-              חפש
-            </button>
           </div>
+          <button
+            onClick={searchAddress}
+            disabled={geoLoading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {geoLoading ? "..." : "חפש"}
+          </button>
           <button
             onClick={useMyLocation}
             disabled={geoLoading}
             title="מיקום נוכחי"
-            className="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg text-sm disabled:opacity-50"
+            className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl text-sm disabled:opacity-50 transition-colors border border-gray-200"
           >
             📍
           </button>
@@ -119,32 +130,36 @@ export default function Home() {
 
         {/* Radius slider */}
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500 shrink-0">רדיוס:</span>
+          <span className="text-xs text-gray-400 shrink-0 w-10">רדיוס</span>
           <input
             type="range"
             min={1}
             max={30}
             value={radiusKm}
             onChange={(e) => setRadiusKm(Number(e.target.value))}
-            className="flex-1 accent-blue-600"
+            className="flex-1 accent-blue-600 h-1.5"
           />
-          <span className="text-sm font-semibold text-blue-700 w-14 text-center shrink-0">
-            {radiusKm} ק"מ
+          <span className="text-sm font-bold text-blue-600 w-14 text-center shrink-0 bg-blue-50 rounded-lg py-0.5">
+            {radiusKm} ק״מ
           </span>
         </div>
 
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        {!center && (
-          <p className="text-xs text-gray-400">הכנס כתובת או לחץ 📍 כדי להתחיל</p>
+        {error && (
+          <p className="text-xs text-red-500 flex items-center gap-1">
+            <span>⚠</span>{error}
+          </p>
+        )}
+        {!center && !error && (
+          <p className="text-xs text-gray-400 text-center pb-0.5">הכנס כתובת או לחץ 📍 כדי להתחיל</p>
         )}
       </header>
 
       {/* Legend */}
-      <div className="flex gap-4 px-4 py-2 bg-white border-b text-xs text-gray-600">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" /> פנויה</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" /> לא ידוע</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-400 inline-block" /> תפוסה</span>
-        <span className="flex items-center gap-1 text-yellow-500">★ הזולה ביותר</span>
+      <div className="flex gap-4 px-4 py-1.5 bg-white border-b border-gray-100 text-xs text-gray-500">
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />פנויה</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />לא ידוע</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />תפוסה</span>
+        <span className="flex items-center gap-1.5 text-amber-500">★ הזולה ביותר</span>
       </div>
 
       {/* Map */}
