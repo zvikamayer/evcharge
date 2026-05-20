@@ -170,6 +170,7 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
 
     const rows: StationRow[] = await Promise.all(
       sorted.map(async ({ pin, dist }) => {
+        const [pinLat, pinLng] = pin.geo.split(",").map(Number);
         const detail = await fetchLocation(pin.id, pin.source);
         const loc = detail.locations[0];
         const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
@@ -188,6 +189,8 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
           pricePerKwh: prices.length ? Math.min(...prices) : null,
           available,
           total: evses.length,
+          lat: pinLat,
+          lng: pinLng,
         };
       })
     );
