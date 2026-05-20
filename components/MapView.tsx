@@ -11,11 +11,15 @@ function pinColor(av: Pin["av"]) {
   return "#ef4444";
 }
 
+const EV_BASE = "https://cp.evedge.co.il/api/v1/app";
+
 const cache: Record<string, LocationDetail> = {};
 async function fetchLocation(id: number, source?: "greenspot"): Promise<LocationDetail> {
   const key = source === "greenspot" ? `gs-${id}` : `ev-${id}`;
   if (cache[key]) return cache[key];
-  const url = source === "greenspot" ? `/api/gs/station/${id}` : `/api/location/${id}`;
+  const url = source === "greenspot"
+    ? `/api/gs/station/${id}`
+    : `${EV_BASE}/locations/${id}`;
   const res = await fetch(url);
   cache[key] = await res.json();
   return cache[key];
@@ -75,10 +79,10 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
     const wantEv = providerRef.current !== "greenspot";
     const wantGs = providerRef.current !== "evedge";
     const [evRes, gsRes] = await Promise.all([
-      wantEv ? fetch(`/api/pins?${qs}`) : Promise.resolve(null),
+      wantEv ? fetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`) : Promise.resolve(null),
       wantGs ? fetch(`/api/gs/pins?${qs}`) : Promise.resolve(null),
     ]);
-    const evPins: Pin[] = evRes ? await evRes.json() : [];
+    const evPins: Pin[] = evRes ? (await evRes.json().then((d: { pins?: Pin[] }) => d.pins ?? []).catch(() => [])) : [];
     const gsPins: Pin[] = gsRes ? await gsRes.json().catch(() => []) : [];
     const pins: Pin[] = [...evPins, ...gsPins];
 
