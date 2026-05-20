@@ -42,7 +42,8 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
   const map = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const circle = useRef<any>(null);
-  const markers = useRef<unknown[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markerMap = useRef<Record<string, { marker: any; pin: Pin }>>({});
 
   const [selected, setSelected] = useState<LocationDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,9 +97,41 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       filterRef.current === "available" ? p.av.ava > 0 : true
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async function openPopupForMarker(marker: any, pin: Pin) {
+      const detail = await fetchLocation(pin.id, pin.source);
+      const loc = detail.locations[0];
+      const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const evses = loc.zones.flatMap((z: any) => z.evses);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const available = evses.filter((e: any) => e.isAvailable).length;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
+      const minPrice = prices.length ? Math.min(...prices) : null;
+      const badge = pin.source === "greenspot"
+        ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
+        : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
+      const [plat, plng] = loc.location.split(",").map(Number);
+      const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
+      const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;
+      marker.bindPopup(`
+        <div style="font-family:sans-serif;direction:rtl;min-width:160px">
+          <div style="font-weight:700;font-size:14px">${badge}${loc.name}</div>
+          <div style="font-size:12px;color:#666;margin-bottom:6px">${loc.address}</div>
+          <div style="font-size:13px;margin-bottom:6px">${available}/${evses.length} פנויים</div>
+          ${minPrice != null ? `<div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:8px">₪${minPrice.toFixed(2)} / kWh</div>` : ""}
+          <div style="display:flex;gap:6px">
+            <a href="${gUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#eff6ff;color:#1d4ed8;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🗺 Google Maps</a>
+            <a href="${wUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#f0f9ff;color:#0369a1;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🔵 Waze</a>
+          </div>
+        </div>
+      `, { closeButton: true, offset: [0, -8] }).openPopup();
+    }
+
     // Clear old markers
-    markers.current.forEach((m: unknown) => (m as any).remove());
-    markers.current = [];
+    Object.values(markerMap.current).forEach(({ marker }) => marker.remove());
+    markerMap.current = {};
 
     // Add new markers
     visible.forEach((pin) => {
@@ -112,37 +145,10 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       });
 
       const marker = L.current.marker([lat, lng], { icon }).addTo(map.current);
+      const key = `${pin.source ?? "ev"}-${pin.id}`;
+      markerMap.current[key] = { marker, pin };
 
-      marker.on("mouseover", async () => {
-        const detail = await fetchLocation(pin.id, pin.source);
-        const loc = detail.locations[0];
-        const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const evses = loc.zones.flatMap((z: any) => z.evses);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const available = evses.filter((e: any) => e.isAvailable).length;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
-        const minPrice = prices.length ? Math.min(...prices) : null;
-        const badge = pin.source === "greenspot"
-          ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
-          : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
-        const [plat, plng] = loc.location.split(",").map(Number);
-        const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
-        const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;
-        marker.bindPopup(`
-          <div style="font-family:sans-serif;direction:rtl;min-width:160px">
-            <div style="font-weight:700;font-size:14px">${badge}${loc.name}</div>
-            <div style="font-size:12px;color:#666;margin-bottom:6px">${loc.address}</div>
-            <div style="font-size:13px;margin-bottom:6px">${available}/${evses.length} פנויים</div>
-            ${minPrice != null ? `<div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:8px">₪${minPrice.toFixed(2)} / kWh</div>` : ""}
-            <div style="display:flex;gap:6px">
-              <a href="${gUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#eff6ff;color:#1d4ed8;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🗺 Google Maps</a>
-              <a href="${wUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#f0f9ff;color:#0369a1;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🔵 Waze</a>
-            </div>
-          </div>
-        `, { closeButton: true, offset: [0, -8] }).openPopup();
-      });
+      marker.on("mouseover", () => openPopupForMarker(marker, pin));
 
       marker.on("click", async () => {
         setLoading(true);
@@ -155,8 +161,6 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
           setLoading(false);
         }
       });
-
-      markers.current.push(marker);
     });
 
     // Build price table (closest 40)
@@ -256,13 +260,63 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
   }, []);
 
   const handleTableSelect = async (id: number, source?: "greenspot") => {
-    setLoading(true);
-    const detail = await fetchLocation(id, source);
-    const loc = detail.locations[0];
-    const [lat, lng] = loc.location.split(",").map(Number);
-    map.current?.panTo([lat, lng]);
-    setSelected(detail);
-    setLoading(false);
+    const key = `${source ?? "ev"}-${id}`;
+    const entry = markerMap.current[key];
+    if (!entry) return;
+    const { marker, pin } = entry;
+    const [lat, lng] = pin.geo.split(",").map(Number);
+    map.current?.setView([lat, lng], 16, { animate: true });
+    // Highlight the marker briefly
+    const el = marker.getElement();
+    if (el) {
+      const dot = el.querySelector("div");
+      if (dot) {
+        dot.style.width = "24px";
+        dot.style.height = "24px";
+        dot.style.border = "3px solid #1d4ed8";
+        dot.style.marginLeft = "-4px";
+        dot.style.marginTop = "-4px";
+        setTimeout(() => {
+          dot.style.width = "16px";
+          dot.style.height = "16px";
+          dot.style.border = "2px solid #fff";
+          dot.style.marginLeft = "";
+          dot.style.marginTop = "";
+        }, 2000);
+      }
+    }
+    // Open popup after pan
+    setTimeout(async () => {
+      const detail = await fetchLocation(pin.id, pin.source).catch(() => null);
+      if (!detail) return;
+      const loc = detail.locations[0];
+      const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const evses = loc.zones.flatMap((z: any) => z.evses);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const available = evses.filter((e: any) => e.isAvailable).length;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
+      const minPrice = prices.length ? Math.min(...prices) : null;
+      const badge = pin.source === "greenspot"
+        ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
+        : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
+      const [plat, plng] = loc.location.split(",").map(Number);
+      const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
+      const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;
+      marker.bindPopup(`
+        <div style="font-family:sans-serif;direction:rtl;min-width:160px">
+          <div style="font-weight:700;font-size:14px">${badge}${loc.name}</div>
+          <div style="font-size:12px;color:#666;margin-bottom:6px">${loc.address}</div>
+          <div style="font-size:13px;margin-bottom:6px">${available}/${evses.length} פנויים</div>
+          ${minPrice != null ? `<div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:8px">₪${minPrice.toFixed(2)} / kWh</div>` : ""}
+          <div style="display:flex;gap:6px">
+            <a href="${gUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#eff6ff;color:#1d4ed8;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🗺 Google Maps</a>
+            <a href="${wUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#f0f9ff;color:#0369a1;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🔵 Waze</a>
+          </div>
+        </div>
+      `, { closeButton: true, offset: [0, -8] }).openPopup();
+    }, 400);
   };
 
   return (
