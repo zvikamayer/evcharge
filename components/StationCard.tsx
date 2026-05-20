@@ -24,6 +24,9 @@ export default function StationCard({
   const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
   const allEvses = loc.zones.flatMap((z) => z.evses);
   const available = allEvses.filter((e) => e.isAvailable).length;
+  const [lat, lng] = loc.location.split(",").map(Number);
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl p-4 max-h-[70vh] overflow-y-auto md:absolute md:top-4 md:left-4 md:right-auto md:bottom-auto md:rounded-xl md:w-80">
@@ -33,6 +36,27 @@ export default function StationCard({
           <p className="text-sm text-gray-500">{loc.address}</p>
         </div>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+      </div>
+
+      <div className="flex gap-2 mb-3">
+        <a
+          href={googleMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
+        >
+          <img src="https://maps.google.com/favicon.ico" className="w-4 h-4" alt="" />
+          Google Maps
+        </a>
+        <a
+          href={wazeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 text-sm font-medium hover:bg-sky-100 transition-colors"
+        >
+          <img src="https://www.waze.com/favicon.ico" className="w-4 h-4" alt="" />
+          Waze
+        </a>
       </div>
 
       <div className="flex gap-2 mb-4">
