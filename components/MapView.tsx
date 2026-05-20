@@ -21,6 +21,7 @@ async function fetchLocation(id: number, source?: "greenspot"): Promise<Location
     ? `/api/gs/station/${id}`
     : `${EV_BASE}/locations/${id}`;
   const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   cache[key] = await res.json();
   return cache[key];
 }
@@ -126,22 +127,33 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
         const badge = pin.source === "greenspot"
           ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
           : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
+        const [plat, plng] = loc.location.split(",").map(Number);
+        const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
+        const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;
         marker.bindPopup(`
-          <div style="font-family:sans-serif;direction:rtl;min-width:150px">
+          <div style="font-family:sans-serif;direction:rtl;min-width:160px">
             <div style="font-weight:700;font-size:14px">${badge}${loc.name}</div>
             <div style="font-size:12px;color:#666;margin-bottom:6px">${loc.address}</div>
-            <div style="font-size:13px">${available}/${evses.length} פנויים</div>
-            ${minPrice != null ? `<div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-top:4px">₪${minPrice.toFixed(2)} / kWh</div>` : ""}
-            <div style="font-size:11px;color:#999;margin-top:4px">לחץ לפרטים</div>
+            <div style="font-size:13px;margin-bottom:6px">${available}/${evses.length} פנויים</div>
+            ${minPrice != null ? `<div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:8px">₪${minPrice.toFixed(2)} / kWh</div>` : ""}
+            <div style="display:flex;gap:6px">
+              <a href="${gUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#eff6ff;color:#1d4ed8;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🗺 Google Maps</a>
+              <a href="${wUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#f0f9ff;color:#0369a1;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🔵 Waze</a>
+            </div>
           </div>
-        `, { closeButton: false, offset: [0, -8] }).openPopup();
+        `, { closeButton: true, offset: [0, -8] }).openPopup();
       });
 
       marker.on("click", async () => {
         setLoading(true);
-        const detail = await fetchLocation(pin.id, pin.source);
-        setSelected(detail);
-        setLoading(false);
+        try {
+          const detail = await fetchLocation(pin.id, pin.source);
+          setSelected(detail);
+        } catch {
+          alert("שגיאה בטעינת פרטי התחנה");
+        } finally {
+          setLoading(false);
+        }
       });
 
       markers.current.push(marker);
