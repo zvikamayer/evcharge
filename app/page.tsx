@@ -56,10 +56,10 @@ export default function Home() {
             <div className="bg-blue-600 text-white rounded-xl p-1.5 leading-none text-lg">⚡</div>
             <div>
               <h1 className="text-lg font-bold text-gray-800 leading-tight">עמדות טעינה</h1>
-              <p className="text-xs text-gray-400 leading-none">EV-Edge · GS · Gn</p>
+              <p className="text-xs text-gray-400 leading-none">EV-Edge · GreenSpot</p>
             </div>
           </div>
-          {/* Status */}
+          {/* Status filters */}
           <div className="flex gap-1.5">
             <button
               onClick={() => setFilter("all")}
@@ -76,13 +76,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Providers */}
+        {/* Provider filters */}
         <div className="flex gap-1.5">
           {[
             { id: "all", label: "כל החברות" },
             { id: "evedge", label: "EV-Edge" },
             { id: "greenspot", label: "GreenSpot" },
-            { id: "gnrgy", label: "ג'ינרג'י" },
           ].map(({ id, label }) => (
             <button
               key={id}
@@ -98,7 +97,7 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Search */}
+        {/* Search row */}
         <div className="flex gap-2">
           <div className="flex flex-1 items-center gap-1 bg-gray-100 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-blue-400 focus-within:bg-white transition-all">
             <span className="text-gray-400 text-sm">🔍</span>
@@ -129,7 +128,7 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Radius */}
+        {/* Radius slider */}
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400 shrink-0 w-10">רדיוס</span>
           <input
@@ -151,7 +150,7 @@ export default function Home() {
           </p>
         )}
         {!center && !error && (
-          <p className="text-xs text-gray-400 text-center pb-0.5">הכנס כתובת או לחץ 📍</p>
+          <p className="text-xs text-gray-400 text-center pb-0.5">הכנס כתובת או לחץ 📍 כדי להתחיל</p>
         )}
       </header>
 
@@ -160,10 +159,10 @@ export default function Home() {
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />פנויה</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />לא ידוע</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />תפוסה</span>
-        <span className="flex items-center gap-1.5 text-amber-500">★ הזולה</span>
+        <span className="flex items-center gap-1.5 text-amber-500">★ הזולה ביותר</span>
       </div>
 
-      {/* Map____ */}
+      {/* Map */}
       <main className="flex-1 relative overflow-hidden">
         <MapView filter={filter} provider={provider} center={center} radiusKm={radiusKm} />
       </main>
