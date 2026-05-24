@@ -13,6 +13,7 @@ export interface StationRow {
   total: number;
   lat: number;
   lng: number;
+  chargeType?: "ac" | "dc" | "mixed";
 }
 
 const PAGE_SIZE = 20;
@@ -115,12 +116,26 @@ export default function CheapTable({
                         <span className="font-semibold text-sm text-gray-800 truncate">{s.name}</span>
                       </div>
                       <div className="text-xs text-gray-400 truncate">{s.address}</div>
-                      <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span className="text-xs text-gray-400">{s.distanceKm.toFixed(1)} ק״מ</span>
                         <span className="text-gray-200">·</span>
                         <span className={`text-xs font-medium ${s.available > 0 ? "text-emerald-600" : "text-red-400"}`}>
                           {s.available}/{s.total} פנויים
                         </span>
+                        {s.chargeType && (
+                          <>
+                            <span className="text-gray-200">·</span>
+                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                              s.chargeType === "dc"
+                                ? "bg-orange-100 text-orange-600"
+                                : s.chargeType === "mixed"
+                                ? "bg-purple-100 text-purple-600"
+                                : "bg-gray-100 text-gray-500"
+                            }`}>
+                              {s.chargeType === "dc" ? "⚡ DC מהיר" : s.chargeType === "mixed" ? "AC+DC" : "AC"}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="text-left shrink-0">

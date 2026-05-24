@@ -147,6 +147,12 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
         ? "#7c3aed"
         : "#2563eb";
       const badge = `<span style="font-size:10px;background:${badgeColor};color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">${badgeLabel}</span>`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
+      const chargeType = types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : null;
+      const chargeLabel = chargeType === "dc" ? "⚡ DC מהיר" : chargeType === "mixed" ? "AC+DC" : chargeType === "ac" ? "AC" : null;
+      const chargeColor = chargeType === "dc" ? "#ea580c" : chargeType === "mixed" ? "#7c3aed" : "#6b7280";
+      const chargeBadge = chargeLabel ? `<span style="font-size:10px;background:${chargeColor}1a;color:${chargeColor};padding:1px 6px;border-radius:8px;font-weight:600">${chargeLabel}</span>` : "";
       const [plat, plng] = loc.location.split(",").map(Number);
       const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
       const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;
@@ -154,7 +160,10 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
         <div style="font-family:sans-serif;direction:rtl;min-width:160px">
           <div style="font-weight:700;font-size:14px">${badge}${loc.name}</div>
           <div style="font-size:12px;color:#666;margin-bottom:6px">${loc.address}</div>
-          <div style="font-size:13px;margin-bottom:6px">${available}/${evses.length} פנויים</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:13px">${available}/${evses.length} פנויים</span>
+            ${chargeBadge}
+          </div>
           ${minPrice != null ? `<div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:8px">₪${minPrice.toFixed(2)} / kWh</div>` : ""}
           <div style="display:flex;gap:6px">
             <a href="${gUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#eff6ff;color:#1d4ed8;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🗺 Google Maps</a>
@@ -227,6 +236,10 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
           const available = evses.filter((e: any) => e.isAvailable).length;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
+          const chargeType: "ac" | "dc" | "mixed" | undefined =
+            types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : undefined;
           return {
             id: pin.id,
             source: pin.source,
@@ -239,6 +252,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
             total: evses.length,
             lat: pinLat,
             lng: pinLng,
+            chargeType,
           } as StationRow;
         } catch {
           return null;
@@ -358,6 +372,12 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
         ? "#7c3aed"
         : "#2563eb";
       const badge = `<span style="font-size:10px;background:${badgeColor};color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">${badgeLabel}</span>`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const types2 = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
+      const chargeType2 = types2.has("dc") && types2.has("ac") ? "mixed" : types2.has("dc") ? "dc" : types2.has("ac") ? "ac" : null;
+      const chargeLabel2 = chargeType2 === "dc" ? "⚡ DC מהיר" : chargeType2 === "mixed" ? "AC+DC" : chargeType2 === "ac" ? "AC" : null;
+      const chargeColor2 = chargeType2 === "dc" ? "#ea580c" : chargeType2 === "mixed" ? "#7c3aed" : "#6b7280";
+      const chargeBadge2 = chargeLabel2 ? `<span style="font-size:10px;background:${chargeColor2}1a;color:${chargeColor2};padding:1px 6px;border-radius:8px;font-weight:600">${chargeLabel2}</span>` : "";
       const [plat, plng] = loc.location.split(",").map(Number);
       const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
       const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;
@@ -365,7 +385,10 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
         <div style="font-family:sans-serif;direction:rtl;min-width:160px">
           <div style="font-weight:700;font-size:14px">${badge}${loc.name}</div>
           <div style="font-size:12px;color:#666;margin-bottom:6px">${loc.address}</div>
-          <div style="font-size:13px;margin-bottom:6px">${available}/${evses.length} פנויים</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:13px">${available}/${evses.length} פנויים</span>
+            ${chargeBadge2}
+          </div>
           ${minPrice != null ? `<div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:8px">₪${minPrice.toFixed(2)} / kWh</div>` : ""}
           <div style="display:flex;gap:6px">
             <a href="${gUrl}" target="_blank" style="flex:1;text-align:center;padding:5px 4px;background:#eff6ff;color:#1d4ed8;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">🗺 Google Maps</a>
