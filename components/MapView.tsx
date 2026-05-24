@@ -166,6 +166,7 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       markerMap.current[key] = { marker, pin };
 
       marker.on("mouseover", () => openPopupForMarker(marker, pin));
+      marker.on("mouseout", () => marker.closePopup());
 
       marker.on("click", async () => {
         setLoading(true);
