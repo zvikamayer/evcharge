@@ -32,7 +32,7 @@ export default function CheapTable({
 
   if (!stations.length) return null;
 
-  const withPrice = stations.filter((s) => s.pricePerKwh != null);
+  const withPrice = stations.filter((s) => s.pricePerKwh != null && s.pricePerKwh > 0);
   const minPrice = withPrice.length ? Math.min(...withPrice.map((s) => s.pricePerKwh!)) : null;
 
   const sorted = [...stations].sort((a, b) => {
@@ -169,7 +169,7 @@ export default function CheapTable({
                       </div>
                     </div>
                     <div className="text-left shrink-0">
-                      {s.pricePerKwh != null ? (
+                      {s.pricePerKwh != null && s.pricePerKwh > 0 ? (
                         <div className={`text-right ${isCheapest ? "text-blue-600" : "text-gray-700"}`}>
                           <span className="text-sm font-bold">₪{s.pricePerKwh.toFixed(2)}</span>
                           <div className="text-xs text-gray-400">/kWh</div>

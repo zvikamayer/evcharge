@@ -107,7 +107,7 @@ export default function StationCard({
                   </div>
                 </div>
               </div>
-              {tariff?.priceForEnergy != null && (
+              {tariff?.priceForEnergy != null && tariff.priceForEnergy > 0 && (
                 <div className="text-right">
                   <span className="text-base font-bold text-blue-600">₪{tariff.priceForEnergy.toFixed(2)}</span>
                   <div className="text-xs text-gray-400">/kWh</div>
