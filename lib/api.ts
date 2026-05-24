@@ -4,6 +4,7 @@ export interface Pin {
   id: number | string;
   source?: "greenspot" | "cellocharge";
   providerName?: string;
+  providerId?: string;
   geo: string;
   av: { ava: number; unk: number; occ?: number; una?: number };
 }

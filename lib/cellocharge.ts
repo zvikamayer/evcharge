@@ -94,6 +94,7 @@ export async function getCelloPins(
       id: loc.id,
       source: "cellocharge" as const,
       providerName: nameMap[loc.providerId] ?? loc.providerId,
+      providerId: loc.providerId,
       geo: `${loc.coordinates.lat},${loc.coordinates.lng}`,
       av: {
         ava: loc.connectorsSummary.available,

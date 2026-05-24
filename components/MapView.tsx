@@ -33,9 +33,10 @@ interface Props {
   provider: string;
   center: { lat: number; lng: number } | null;
   radiusKm: number;
+  onPinCounts?: (counts: Record<string, number>) => void;
 }
 
-export default function MapView({ filter, provider, center, radiusKm }: Props) {
+export default function MapView({ filter, provider, center, radiusKm, onPinCounts }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapReady = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,6 +58,9 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
 
   const providerRef = useRef(provider);
   useEffect(() => { providerRef.current = provider; }, [provider]);
+
+  const onPinCountsRef = useRef(onPinCounts);
+  useEffect(() => { onPinCountsRef.current = onPinCounts; }, [onPinCounts]);
 
   // Called once map is ready and whenever center/radius/filter change
   const refresh = useCallback(async (
@@ -102,6 +106,19 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       const [lat, lng] = p.geo.split(",").map(Number);
       return haversineKm(c.lat, c.lng, lat, lng) <= r;
     });
+
+    // Emit per-provider counts for filter buttons
+    if (onPinCountsRef.current) {
+      const counts: Record<string, number> = { all: inRadius.length };
+      counts["evedge"] = inRadius.filter((p) => p.source !== "greenspot" && p.source !== "cellocharge").length;
+      counts["greenspot"] = inRadius.filter((p) => p.source === "greenspot").length;
+      for (const p of inRadius) {
+        if (p.source === "cellocharge" && p.providerId) {
+          counts[p.providerId] = (counts[p.providerId] ?? 0) + 1;
+        }
+      }
+      onPinCountsRef.current(counts);
+    }
 
     const visible = inRadius.filter((p) =>
       filterRef.current === "available" ? p.av.ava > 0 : true

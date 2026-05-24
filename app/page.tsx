@@ -19,6 +19,7 @@ export default function Home() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState("");
   const [celloProviders, setCelloProviders] = useState<CelloProvider[]>([]);
+  const [pinCounts, setPinCounts] = useState<Record<string, number>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -97,19 +98,29 @@ export default function Home() {
 
         {/* Provider filters — scrollable */}
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-          {allProviders.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setProvider(id)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
-                provider === id
-                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                  : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          {allProviders.map(({ id, label }) => {
+            const count = pinCounts[id];
+            return (
+              <button
+                key={id}
+                onClick={() => setProvider(id)}
+                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
+                  provider === id
+                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
+                }`}
+              >
+                {label}
+                {count != null && count > 0 && (
+                  <span className={`text-[10px] font-semibold px-1 rounded-full ${
+                    provider === id ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400"
+                  }`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Search row */}
@@ -179,7 +190,7 @@ export default function Home() {
 
       {/* Map */}
       <main className="flex-1 relative overflow-hidden">
-        <MapView filter={filter} provider={provider} center={center} radiusKm={radiusKm} />
+        <MapView filter={filter} provider={provider} center={center} radiusKm={radiusKm} onPinCounts={setPinCounts} />
       </main>
     </div>
   );
