@@ -181,14 +181,17 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       });
     });
 
-    // Build price table (closest 40)
-    const sorted = [...inRadius]
-      .map((p) => {
-        const [lat, lng] = p.geo.split(",").map(Number);
-        return { pin: p, dist: haversineKm(c.lat, c.lng, lat, lng) };
-      })
+    // Build price table: all CelloCharge in radius (cached, no extra calls) + closest 40 for EV-Edge/GreenSpot
+    const withDist = [...inRadius].map((p) => {
+      const [lat, lng] = p.geo.split(",").map(Number);
+      return { pin: p, dist: haversineKm(c.lat, c.lng, lat, lng) };
+    });
+    const celloRows = withDist.filter(({ pin }) => pin.source === "cellocharge");
+    const otherRows = withDist
+      .filter(({ pin }) => pin.source !== "cellocharge")
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 40);
+    const sorted = [...otherRows, ...celloRows];
 
     const rows: StationRow[] = await Promise.all(
       sorted.map(async ({ pin, dist }) => {
