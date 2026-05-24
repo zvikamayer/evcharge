@@ -103,7 +103,7 @@ export default function Home() {
             return (
               <button
                 key={id}
-                onClick={() => setProvider(id)}
+                onClick={() => setProvider(provider === id && id !== "all" ? "all" : id)}
                 className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
                   provider === id
                     ? "bg-blue-600 text-white border-blue-600 shadow-sm"
