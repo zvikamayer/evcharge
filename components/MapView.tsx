@@ -134,7 +134,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const available = evses.filter((e: any) => e.isAvailable).length;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
+      const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
       const minPrice = prices.length ? Math.min(...prices) : null;
       const badgeLabel = pin.source === "greenspot"
         ? "GreenSpot"
@@ -235,7 +235,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const available = evses.filter((e: any) => e.isAvailable).length;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
+          const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
           const chargeType: "ac" | "dc" | "mixed" | undefined =
@@ -359,7 +359,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const available = evses.filter((e: any) => e.isAvailable).length;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
+      const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
       const minPrice = prices.length ? Math.min(...prices) : null;
       const badgeLabel = pin.source === "greenspot"
         ? "GreenSpot"
