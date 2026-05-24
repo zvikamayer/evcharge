@@ -76,7 +76,6 @@ export default function Home() {
             <div className="bg-blue-600 text-white rounded-xl p-1.5 leading-none text-lg">⚡</div>
             <div>
               <h1 className="text-lg font-bold text-gray-800 leading-tight">עמדות טעינה</h1>
-              <p className="text-xs text-gray-400 leading-none">EV-Edge · GreenSpot · CelloCharge</p>
             </div>
           </div>
           {/* Status filters */}
