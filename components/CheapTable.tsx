@@ -27,6 +27,7 @@ export default function CheapTable({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [sortBy, setSortBy] = useState<"price" | "distance">("price");
+  const [filterType, setFilterType] = useState<"all" | "ac" | "dc">("all");
   const [showAll, setShowAll] = useState(false);
 
   if (!stations.length) return null;
@@ -42,7 +43,13 @@ export default function CheapTable({
     return a.pricePerKwh - b.pricePerKwh;
   });
 
-  const visible = showAll ? sorted : sorted.slice(0, PAGE_SIZE);
+  const filtered = filterType === "all" ? sorted : sorted.filter((s) => {
+    if (filterType === "dc") return s.chargeType === "dc" || s.chargeType === "mixed";
+    if (filterType === "ac") return s.chargeType === "ac" || s.chargeType === "mixed";
+    return true;
+  });
+
+  const visible = showAll ? filtered : filtered.slice(0, PAGE_SIZE);
 
   return (
     <div className="absolute top-2 left-2 right-2 md:top-4 md:left-4 md:right-auto z-[1000] bg-white rounded-2xl shadow-xl md:w-80 flex flex-col overflow-hidden border border-gray-100">
@@ -61,22 +68,45 @@ export default function CheapTable({
         <span className="text-gray-400 text-sm">{collapsed ? "▲" : "▼"}</span>
       </div>
 
-      {/* Sort toggle */}
+      {/* Sort + charge-type filter */}
       {!collapsed && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 bg-gray-50/60">
-          <span className="text-xs text-gray-400 shrink-0">סינון לפי —</span>
-          <button
-            onClick={() => { setSortBy("price"); setShowAll(false); }}
-            className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "price" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
-          >
-            מחיר
-          </button>
-          <button
-            onClick={() => { setSortBy("distance"); setShowAll(false); }}
-            className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "distance" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
-          >
-            מרחק
-          </button>
+        <div className="flex flex-col gap-1.5 px-4 py-2 border-b border-gray-100 bg-gray-50/60">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 shrink-0">מיון —</span>
+            <button
+              onClick={() => { setSortBy("price"); setShowAll(false); }}
+              className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "price" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
+            >
+              מחיר
+            </button>
+            <button
+              onClick={() => { setSortBy("distance"); setShowAll(false); }}
+              className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "distance" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
+            >
+              מרחק
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 shrink-0">סוג —</span>
+            <button
+              onClick={() => { setFilterType("all"); setShowAll(false); }}
+              className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${filterType === "all" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
+            >
+              הכל
+            </button>
+            <button
+              onClick={() => { setFilterType("ac"); setShowAll(false); }}
+              className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${filterType === "ac" ? "bg-gray-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
+            >
+              AC
+            </button>
+            <button
+              onClick={() => { setFilterType("dc"); setShowAll(false); }}
+              className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${filterType === "dc" ? "bg-orange-500 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
+            >
+              ⚡ DC מהיר
+            </button>
+          </div>
         </div>
       )}
 
@@ -174,15 +204,15 @@ export default function CheapTable({
               </div>
             );
           })}
-          {!showAll && sorted.length > PAGE_SIZE && (
+          {!showAll && filtered.length > PAGE_SIZE && (
             <button
               onClick={() => setShowAll(true)}
               className="w-full py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors border-t border-gray-100"
             >
-              הצג עוד {sorted.length - PAGE_SIZE} תחנות ▼
+              הצג עוד {filtered.length - PAGE_SIZE} תחנות ▼
             </button>
           )}
-          {showAll && sorted.length > PAGE_SIZE && (
+          {showAll && filtered.length > PAGE_SIZE && (
             <button
               onClick={() => setShowAll(false)}
               className="w-full py-2.5 text-xs font-semibold text-gray-400 hover:bg-gray-50 transition-colors border-t border-gray-100"
