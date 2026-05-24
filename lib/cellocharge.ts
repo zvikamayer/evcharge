@@ -78,7 +78,9 @@ export async function getCelloPins(
   maxLng: number,
   providerId?: string,
 ): Promise<Pin[]> {
-  const all = await fetchAllCelloLocations();
+  const [all, providers] = await Promise.all([fetchAllCelloLocations(), fetchCelloProviders()]);
+  const nameMap = Object.fromEntries(providers.map((p) => [p.id, p.name]));
+
   return all
     .filter(
       (loc) =>
@@ -91,6 +93,7 @@ export async function getCelloPins(
     .map((loc) => ({
       id: loc.id,
       source: "cellocharge" as const,
+      providerName: nameMap[loc.providerId] ?? loc.providerId,
       geo: `${loc.coordinates.lat},${loc.coordinates.lng}`,
       av: {
         ava: loc.connectorsSummary.available,

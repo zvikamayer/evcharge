@@ -118,11 +118,17 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
       const minPrice = prices.length ? Math.min(...prices) : null;
-      const badge = pin.source === "greenspot"
-        ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
+      const badgeLabel = pin.source === "greenspot"
+        ? "GreenSpot"
         : pin.source === "cellocharge"
-        ? `<span style="font-size:10px;background:#7c3aed;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">CelloCharge</span>`
-        : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
+        ? (pin.providerName ?? "CelloCharge")
+        : "EV-Edge";
+      const badgeColor = pin.source === "greenspot"
+        ? "#16a34a"
+        : pin.source === "cellocharge"
+        ? "#7c3aed"
+        : "#2563eb";
+      const badge = `<span style="font-size:10px;background:${badgeColor};color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">${badgeLabel}</span>`;
       const [plat, plng] = loc.location.split(",").map(Number);
       const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
       const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;
@@ -198,6 +204,7 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
         return {
           id: pin.id,
           source: pin.source,
+          providerName: pin.providerName,
           name: loc.name,
           address: loc.address,
           distanceKm: dist,
@@ -309,11 +316,17 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
       const minPrice = prices.length ? Math.min(...prices) : null;
-      const badge = pin.source === "greenspot"
-        ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
+      const badgeLabel = pin.source === "greenspot"
+        ? "GreenSpot"
         : pin.source === "cellocharge"
-        ? `<span style="font-size:10px;background:#7c3aed;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">CelloCharge</span>`
-        : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
+        ? (pin.providerName ?? "CelloCharge")
+        : "EV-Edge";
+      const badgeColor = pin.source === "greenspot"
+        ? "#16a34a"
+        : pin.source === "cellocharge"
+        ? "#7c3aed"
+        : "#2563eb";
+      const badge = `<span style="font-size:10px;background:${badgeColor};color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">${badgeLabel}</span>`;
       const [plat, plng] = loc.location.split(",").map(Number);
       const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
       const wUrl = `https://waze.com/ul?ll=${plat},${plng}&navigate=yes`;

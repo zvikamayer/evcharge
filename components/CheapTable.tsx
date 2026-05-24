@@ -4,6 +4,7 @@ import { useState } from "react";
 export interface StationRow {
   id: number | string;
   source?: "greenspot" | "cellocharge";
+  providerName?: string;
   name: string;
   address: string;
   distanceKm: number;
@@ -81,7 +82,11 @@ export default function CheapTable({
                             ? "bg-violet-100 text-violet-700"
                             : "bg-blue-100 text-blue-700"
                         }`}>
-                          {s.source === "greenspot" ? "GreenSpot" : s.source === "cellocharge" ? "CelloCharge" : "EV-Edge"}
+                          {s.source === "greenspot"
+                            ? "GreenSpot"
+                            : s.source === "cellocharge"
+                            ? (s.providerName ?? "CelloCharge")
+                            : "EV-Edge"}
                         </span>
                         <span className="font-semibold text-sm text-gray-800 truncate">{s.name}</span>
                       </div>
