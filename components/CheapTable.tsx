@@ -62,18 +62,19 @@ export default function CheapTable({
 
       {/* Sort toggle */}
       {!collapsed && (
-        <div className="flex gap-1.5 px-4 py-2 border-b border-gray-100 bg-gray-50/60">
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 bg-gray-50/60">
+          <span className="text-xs text-gray-400 shrink-0">סינון לפי —</span>
           <button
             onClick={() => { setSortBy("price"); setShowAll(false); }}
             className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "price" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
           >
-            ₪ מחיר
+            מחיר
           </button>
           <button
             onClick={() => { setSortBy("distance"); setShowAll(false); }}
             className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "distance" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
           >
-            📍 מרחק
+            מרחק
           </button>
         </div>
       )}
