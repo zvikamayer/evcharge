@@ -80,13 +80,17 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
     // Fetch pins from all providers in parallel
     const bb = boundingBox(c.lat, c.lng, r);
     const qs = `minLat=${bb.minLat}&maxLat=${bb.maxLat}&minLng=${bb.minLng}&maxLng=${bb.maxLng}`;
-    const wantEv = providerRef.current !== "greenspot" && providerRef.current !== "cellocharge";
-    const wantGs = providerRef.current !== "evedge" && providerRef.current !== "cellocharge";
-    const wantCello = providerRef.current !== "evedge" && providerRef.current !== "greenspot";
+    const p = providerRef.current;
+    const isStaticProvider = p === "all" || p === "evedge" || p === "greenspot";
+    // Any unknown provider id is treated as a CelloCharge providerId
+    const wantEv = p === "all" || p === "evedge";
+    const wantGs = p === "all" || p === "greenspot";
+    const wantCello = p === "all" || !isStaticProvider;
+    const celloProviderParam = !isStaticProvider ? `&providerId=${encodeURIComponent(p)}` : "";
     const [evRes, gsRes, celloRes] = await Promise.all([
       wantEv ? fetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`) : Promise.resolve(null),
       wantGs ? fetch(`/api/gs/pins?${qs}`) : Promise.resolve(null),
-      wantCello ? fetch(`/api/cello/pins?${qs}`) : Promise.resolve(null),
+      wantCello ? fetch(`/api/cello/pins?${qs}${celloProviderParam}`) : Promise.resolve(null),
     ]);
     const evPins: Pin[] = evRes ? (await evRes.json().then((d: { pins?: Pin[] }) => d.pins ?? []).catch(() => [])) : [];
     const gsPins: Pin[] = gsRes ? await gsRes.json().catch(() => []) : [];

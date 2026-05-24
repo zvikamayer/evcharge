@@ -5,6 +5,9 @@ const CELLO_BASE = "https://api.prod.ev.cellocharge.com/evsfeed/api/v2/portal";
 const CELLO_TOKEN = "150048bf-7667-424e-8923-b1ca8dd0e0fd";
 const CELLO_HEADERS = { Accept: "application/json", Authorization: `Bearer ${CELLO_TOKEN}` };
 
+// Providers with direct integrations — exclude from CelloCharge list to avoid duplication
+const DIRECT_PROVIDER_IDS = new Set(["EvEdge", "Greenspot"]);
+
 export interface CelloLocation {
   id: string;
   providerId: string;
@@ -16,9 +19,16 @@ export interface CelloLocation {
   connectorsSummary: { total: number; available: number; occupied?: number };
 }
 
-// Server-side cache: avoids hitting CelloCharge API on every request
+export interface CelloProvider {
+  id: string;
+  name: string;
+  imageUrl: string;
+}
+
+// Server-side caches
 let cachedLocations: CelloLocation[] | null = null;
 let cacheTs = 0;
+let cachedProviders: CelloProvider[] | null = null;
 const CACHE_TTL_MS = 60_000;
 
 export async function fetchAllCelloLocations(): Promise<CelloLocation[]> {
@@ -35,11 +45,38 @@ export async function fetchAllCelloLocations(): Promise<CelloLocation[]> {
   return cachedLocations!;
 }
 
+export async function fetchCelloProviders(): Promise<CelloProvider[]> {
+  if (cachedProviders) return cachedProviders;
+
+  const res = await fetch(`${CELLO_BASE}/providers`, {
+    headers: CELLO_HEADERS,
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+
+  const raw: { id: string; name: string; imageUrl: string }[] = await res.json();
+
+  // Deduplicate by name, exclude providers with direct integrations
+  const seen = new Set<string>();
+  cachedProviders = raw
+    .filter((p) => !DIRECT_PROVIDER_IDS.has(p.id))
+    .filter((p) => {
+      const key = p.name.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((p) => ({ id: p.id, name: p.name.trim(), imageUrl: p.imageUrl }));
+
+  return cachedProviders;
+}
+
 export async function getCelloPins(
   minLat: number,
   maxLat: number,
   minLng: number,
   maxLng: number,
+  providerId?: string,
 ): Promise<Pin[]> {
   const all = await fetchAllCelloLocations();
   return all
@@ -48,7 +85,8 @@ export async function getCelloPins(
         loc.coordinates.lat >= minLat &&
         loc.coordinates.lat <= maxLat &&
         loc.coordinates.lng >= minLng &&
-        loc.coordinates.lng <= maxLng,
+        loc.coordinates.lng <= maxLng &&
+        (providerId == null || loc.providerId === providerId),
     )
     .map((loc) => ({
       id: loc.id,

@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     Number(s.get("maxLat") ?? 33),
     Number(s.get("minLng") ?? 34),
     Number(s.get("maxLng") ?? 36),
+    s.get("providerId") ?? undefined,
   );
   return NextResponse.json(pins);
 }

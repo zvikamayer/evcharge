@@ -1,8 +1,14 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import type { CelloProvider } from "@/lib/cellocharge";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
+
+const STATIC_PROVIDERS = [
+  { id: "evedge", label: "EV-Edge" },
+  { id: "greenspot", label: "GreenSpot" },
+];
 
 export default function Home() {
   const [filter, setFilter] = useState("all");
@@ -12,7 +18,15 @@ export default function Home() {
   const [address, setAddress] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState("");
+  const [celloProviders, setCelloProviders] = useState<CelloProvider[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/cello/providers")
+      .then((r) => r.json())
+      .then(setCelloProviders)
+      .catch(() => {});
+  }, []);
 
   const useMyLocation = () => {
     if (!navigator.geolocation) return;
@@ -46,6 +60,12 @@ export default function Home() {
     setGeoLoading(false);
   };
 
+  const allProviders = [
+    { id: "all", label: "כל החברות" },
+    ...STATIC_PROVIDERS,
+    ...celloProviders.map((p) => ({ id: p.id, label: p.name })),
+  ];
+
   return (
     <div className="flex flex-col h-screen bg-gray-100" dir="rtl">
       {/* Header */}
@@ -56,7 +76,7 @@ export default function Home() {
             <div className="bg-blue-600 text-white rounded-xl p-1.5 leading-none text-lg">⚡</div>
             <div>
               <h1 className="text-lg font-bold text-gray-800 leading-tight">עמדות טעינה</h1>
-              <p className="text-xs text-gray-400 leading-none">EV-Edge · GreenSpot</p>
+              <p className="text-xs text-gray-400 leading-none">EV-Edge · GreenSpot · CelloCharge</p>
             </div>
           </div>
           {/* Status filters */}
@@ -76,18 +96,13 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Provider filters */}
-        <div className="flex gap-1.5 flex-wrap">
-          {[
-            { id: "all", label: "כל החברות" },
-            { id: "evedge", label: "EV-Edge" },
-            { id: "greenspot", label: "GreenSpot" },
-            { id: "cellocharge", label: "CelloCharge" },
-          ].map(({ id, label }) => (
+        {/* Provider filters — scrollable */}
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
+          {allProviders.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setProvider(id)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all border ${
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
                 provider === id
                   ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                   : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
