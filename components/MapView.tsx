@@ -193,33 +193,39 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       .slice(0, 40);
     const sorted = [...otherRows, ...celloRows];
 
-    const rows: StationRow[] = await Promise.all(
+    const rowsRaw = await Promise.all(
       sorted.map(async ({ pin, dist }) => {
-        const [pinLat, pinLng] = pin.geo.split(",").map(Number);
-        const detail = await fetchLocation(pin.id, pin.source);
-        const loc = detail.locations[0];
-        const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const evses = loc.zones.flatMap((z: any) => z.evses);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const available = evses.filter((e: any) => e.isAvailable).length;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
-        return {
-          id: pin.id,
-          source: pin.source,
-          providerName: pin.providerName,
-          name: loc.name,
-          address: loc.address,
-          distanceKm: dist,
-          pricePerKwh: prices.length ? Math.min(...prices) : null,
-          available,
-          total: evses.length,
-          lat: pinLat,
-          lng: pinLng,
-        };
+        try {
+          const [pinLat, pinLng] = pin.geo.split(",").map(Number);
+          const detail = await fetchLocation(pin.id, pin.source);
+          const loc = detail.locations[0];
+          if (!loc) return null;
+          const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const evses = loc.zones.flatMap((z: any) => z.evses);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const available = evses.filter((e: any) => e.isAvailable).length;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null);
+          return {
+            id: pin.id,
+            source: pin.source,
+            providerName: pin.providerName,
+            name: loc.name,
+            address: loc.address,
+            distanceKm: dist,
+            pricePerKwh: prices.length ? Math.min(...prices) : null,
+            available,
+            total: evses.length,
+            lat: pinLat,
+            lng: pinLng,
+          } as StationRow;
+        } catch {
+          return null;
+        }
       })
     );
+    const rows: StationRow[] = rowsRaw.filter((r): r is StationRow => r !== null);
     setTableRows(rows);
   }, []);
 
