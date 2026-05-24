@@ -29,6 +29,8 @@ export interface CelloProvider {
 let cachedLocations: CelloLocation[] | null = null;
 let cacheTs = 0;
 let cachedProviders: CelloProvider[] | null = null;
+// Maps every raw provider ID → canonical (deduplicated) provider ID
+let providerIdMap: Map<string, string> = new Map();
 const CACHE_TTL_MS = 60_000;
 
 export async function fetchAllCelloLocations(): Promise<CelloLocation[]> {
@@ -56,17 +58,25 @@ export async function fetchCelloProviders(): Promise<CelloProvider[]> {
 
   const raw: { id: string; name: string; imageUrl: string }[] = await res.json();
 
-  // Deduplicate by name, exclude providers with direct integrations
-  const seen = new Set<string>();
-  cachedProviders = raw
-    .filter((p) => !DIRECT_PROVIDER_IDS.has(p.id))
-    .filter((p) => {
-      const key = p.name.trim().toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .map((p) => ({ id: p.id, name: p.name.trim(), imageUrl: p.imageUrl }));
+  // Deduplicate by name, exclude providers with direct integrations.
+  // Also build providerIdMap so every raw ID maps to a canonical ID.
+  const seenName = new Map<string, string>(); // normalised name → canonical ID
+  providerIdMap = new Map();
+  cachedProviders = [];
+
+  for (const p of raw) {
+    if (DIRECT_PROVIDER_IDS.has(p.id)) continue;
+    const key = p.name.trim().toLowerCase();
+    if (seenName.has(key)) {
+      // Duplicate — map this ID to the canonical ID chosen first
+      providerIdMap.set(p.id, seenName.get(key)!);
+    } else {
+      // First occurrence — this becomes the canonical ID
+      seenName.set(key, p.id);
+      providerIdMap.set(p.id, p.id);
+      cachedProviders.push({ id: p.id, name: p.name.trim(), imageUrl: p.imageUrl });
+    }
+  }
 
   return cachedProviders;
 }
@@ -82,19 +92,23 @@ export async function getCelloPins(
   const nameMap = Object.fromEntries(providers.map((p) => [p.id, p.name]));
 
   return all
-    .filter(
-      (loc) =>
+    .filter((loc) => {
+      const canonicalId = providerIdMap.get(loc.providerId) ?? loc.providerId;
+      return (
         loc.coordinates.lat >= minLat &&
         loc.coordinates.lat <= maxLat &&
         loc.coordinates.lng >= minLng &&
         loc.coordinates.lng <= maxLng &&
-        (providerId == null || loc.providerId === providerId),
-    )
-    .map((loc) => ({
+        (providerId == null || canonicalId === providerId)
+      );
+    })
+    .map((loc) => {
+      const canonicalId = providerIdMap.get(loc.providerId) ?? loc.providerId;
+      return {
       id: loc.id,
       source: "cellocharge" as const,
-      providerName: nameMap[loc.providerId] ?? loc.providerId,
-      providerId: loc.providerId,
+      providerName: nameMap[canonicalId] ?? loc.providerId,
+      providerId: canonicalId,
       geo: `${loc.coordinates.lat},${loc.coordinates.lng}`,
       av: {
         ava: loc.connectorsSummary.available,
@@ -106,7 +120,8 @@ export async function getCelloPins(
             (loc.connectorsSummary.occupied ?? 0),
         ),
       },
-    }));
+    };
+    });
 }
 
 export async function getCelloStationAsDetail(id: string): Promise<LocationDetail> {
