@@ -50,6 +50,7 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
   const [selected, setSelected] = useState<LocationDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [tableRows, setTableRows] = useState<StationRow[]>([]);
+  const [tableLoading, setTableLoading] = useState(false);
 
   const filterRef = useRef(filter);
   useEffect(() => { filterRef.current = filter; }, [filter]);
@@ -193,6 +194,8 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       .slice(0, 40);
     const sorted = [...otherRows, ...celloRows];
 
+    setTableLoading(true);
+    setTableRows([]);
     const rowsRaw = await Promise.all(
       sorted.map(async ({ pin, dist }) => {
         try {
@@ -227,6 +230,7 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
     );
     const rows: StationRow[] = rowsRaw.filter((r): r is StationRow => r !== null);
     setTableRows(rows);
+    setTableLoading(false);
   }, []);
 
   // Trigger refresh when props change
@@ -358,7 +362,16 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
-      {tableRows.length > 0 && (
+      {tableLoading && (
+        <div className="absolute top-2 left-2 right-2 md:top-4 md:left-4 md:right-auto z-[1000] bg-white rounded-2xl shadow-xl md:w-80 px-4 py-4 flex items-center gap-3 border border-gray-100">
+          <svg className="animate-spin h-5 w-5 text-blue-600 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <span className="text-sm font-medium text-gray-600">טוען תחנות...</span>
+        </div>
+      )}
+      {!tableLoading && tableRows.length > 0 && (
         <CheapTable stations={tableRows} onSelect={(id, source) => handleTableSelect(id, source)} />
       )}
       {loading && (
