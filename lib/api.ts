@@ -1,8 +1,8 @@
 const BASE = "https://cp.evedge.co.il/api/v1/app";
 
 export interface Pin {
-  id: number;
-  source?: "greenspot";
+  id: number | string;
+  source?: "greenspot" | "cellocharge";
   geo: string;
   av: { ava: number; unk: number; occ?: number; una?: number };
 }

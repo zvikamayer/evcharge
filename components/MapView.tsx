@@ -14,11 +14,13 @@ function pinColor(av: Pin["av"]) {
 const EV_BASE = "https://cp.evedge.co.il/api/v1/app";
 
 const cache: Record<string, LocationDetail> = {};
-async function fetchLocation(id: number, source?: "greenspot"): Promise<LocationDetail> {
-  const key = source === "greenspot" ? `gs-${id}` : `ev-${id}`;
+async function fetchLocation(id: number | string, source?: "greenspot" | "cellocharge"): Promise<LocationDetail> {
+  const key = source === "greenspot" ? `gs-${id}` : source === "cellocharge" ? `cello-${id}` : `ev-${id}`;
   if (cache[key]) return cache[key];
   const url = source === "greenspot"
     ? `/api/gs/station/${id}`
+    : source === "cellocharge"
+    ? `/api/cello/station/${id}`
     : `${EV_BASE}/locations/${id}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -75,18 +77,21 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       weight: 2,
     }).addTo(map.current);
 
-    // Fetch pins from both providers in parallel
+    // Fetch pins from all providers in parallel
     const bb = boundingBox(c.lat, c.lng, r);
     const qs = `minLat=${bb.minLat}&maxLat=${bb.maxLat}&minLng=${bb.minLng}&maxLng=${bb.maxLng}`;
-    const wantEv = providerRef.current !== "greenspot";
-    const wantGs = providerRef.current !== "evedge";
-    const [evRes, gsRes] = await Promise.all([
+    const wantEv = providerRef.current !== "greenspot" && providerRef.current !== "cellocharge";
+    const wantGs = providerRef.current !== "evedge" && providerRef.current !== "cellocharge";
+    const wantCello = providerRef.current !== "evedge" && providerRef.current !== "greenspot";
+    const [evRes, gsRes, celloRes] = await Promise.all([
       wantEv ? fetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`) : Promise.resolve(null),
       wantGs ? fetch(`/api/gs/pins?${qs}`) : Promise.resolve(null),
+      wantCello ? fetch(`/api/cello/pins?${qs}`) : Promise.resolve(null),
     ]);
     const evPins: Pin[] = evRes ? (await evRes.json().then((d: { pins?: Pin[] }) => d.pins ?? []).catch(() => [])) : [];
     const gsPins: Pin[] = gsRes ? await gsRes.json().catch(() => []) : [];
-    const pins: Pin[] = [...evPins, ...gsPins];
+    const celloPins: Pin[] = celloRes ? await celloRes.json().catch(() => []) : [];
+    const pins: Pin[] = [...evPins, ...gsPins, ...celloPins];
 
     const inRadius = pins.filter((p) => {
       const [lat, lng] = p.geo.split(",").map(Number);
@@ -111,6 +116,8 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       const minPrice = prices.length ? Math.min(...prices) : null;
       const badge = pin.source === "greenspot"
         ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
+        : pin.source === "cellocharge"
+        ? `<span style="font-size:10px;background:#7c3aed;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">CelloCharge</span>`
         : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
       const [plat, plng] = loc.location.split(",").map(Number);
       const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;
@@ -259,7 +266,7 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTableSelect = async (id: number, source?: "greenspot") => {
+  const handleTableSelect = async (id: number | string, source?: "greenspot" | "cellocharge") => {
     const key = `${source ?? "ev"}-${id}`;
     const entry = markerMap.current[key];
     if (!entry) return;
@@ -300,6 +307,8 @@ export default function MapView({ filter, provider, center, radiusKm }: Props) {
       const minPrice = prices.length ? Math.min(...prices) : null;
       const badge = pin.source === "greenspot"
         ? `<span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">GreenSpot</span>`
+        : pin.source === "cellocharge"
+        ? `<span style="font-size:10px;background:#7c3aed;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">CelloCharge</span>`
         : `<span style="font-size:10px;background:#2563eb;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px">EV-Edge</span>`;
       const [plat, plng] = loc.location.split(",").map(Number);
       const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${plat},${plng}`;

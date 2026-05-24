@@ -2,8 +2,8 @@
 import { useState } from "react";
 
 export interface StationRow {
-  id: number;
-  source?: "greenspot";
+  id: number | string;
+  source?: "greenspot" | "cellocharge";
   name: string;
   address: string;
   distanceKm: number;
@@ -19,7 +19,7 @@ export default function CheapTable({
   onSelect,
 }: {
   stations: StationRow[];
-  onSelect: (id: number, source?: "greenspot") => void;
+  onSelect: (id: number | string, source?: "greenspot" | "cellocharge") => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -77,9 +77,11 @@ export default function CheapTable({
                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
                           s.source === "greenspot"
                             ? "bg-emerald-100 text-emerald-700"
+                            : s.source === "cellocharge"
+                            ? "bg-violet-100 text-violet-700"
                             : "bg-blue-100 text-blue-700"
                         }`}>
-                          {s.source === "greenspot" ? "GreenSpot" : "EV-Edge"}
+                          {s.source === "greenspot" ? "GreenSpot" : s.source === "cellocharge" ? "CelloCharge" : "EV-Edge"}
                         </span>
                         <span className="font-semibold text-sm text-gray-800 truncate">{s.name}</span>
                       </div>

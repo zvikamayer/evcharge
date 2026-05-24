@@ -77,11 +77,12 @@ export default function Home() {
         </div>
 
         {/* Provider filters */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap">
           {[
             { id: "all", label: "כל החברות" },
             { id: "evedge", label: "EV-Edge" },
             { id: "greenspot", label: "GreenSpot" },
+            { id: "cellocharge", label: "CelloCharge" },
           ].map(({ id, label }) => (
             <button
               key={id}
