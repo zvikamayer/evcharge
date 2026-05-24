@@ -15,6 +15,8 @@ export interface StationRow {
   lng: number;
 }
 
+const PAGE_SIZE = 20;
+
 export default function CheapTable({
   stations,
   onSelect,
@@ -23,6 +25,8 @@ export default function CheapTable({
   onSelect: (id: number | string, source?: "greenspot" | "cellocharge") => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [sortBy, setSortBy] = useState<"price" | "distance">("price");
+  const [showAll, setShowAll] = useState(false);
 
   if (!stations.length) return null;
 
@@ -30,11 +34,14 @@ export default function CheapTable({
   const minPrice = withPrice.length ? Math.min(...withPrice.map((s) => s.pricePerKwh!)) : null;
 
   const sorted = [...stations].sort((a, b) => {
+    if (sortBy === "distance") return a.distanceKm - b.distanceKm;
     if (a.pricePerKwh == null && b.pricePerKwh == null) return a.distanceKm - b.distanceKm;
     if (a.pricePerKwh == null) return 1;
     if (b.pricePerKwh == null) return -1;
     return a.pricePerKwh - b.pricePerKwh;
   });
+
+  const visible = showAll ? sorted : sorted.slice(0, PAGE_SIZE);
 
   return (
     <div className="absolute top-2 left-2 right-2 md:top-4 md:left-4 md:right-auto z-[1000] bg-white rounded-2xl shadow-xl md:w-80 flex flex-col overflow-hidden border border-gray-100">
@@ -45,9 +52,7 @@ export default function CheapTable({
       >
         <div className="flex items-center gap-2">
           <span className="text-base">⚡</span>
-          <h3 className="font-bold text-sm text-gray-800">
-            תחנות בטווח
-          </h3>
+          <h3 className="font-bold text-sm text-gray-800">תחנות בטווח</h3>
           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
             {stations.length}
           </span>
@@ -55,10 +60,28 @@ export default function CheapTable({
         <span className="text-gray-400 text-sm">{collapsed ? "▲" : "▼"}</span>
       </div>
 
+      {/* Sort toggle */}
+      {!collapsed && (
+        <div className="flex gap-1.5 px-4 py-2 border-b border-gray-100 bg-gray-50/60">
+          <button
+            onClick={() => { setSortBy("price"); setShowAll(false); }}
+            className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "price" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
+          >
+            ₪ מחיר
+          </button>
+          <button
+            onClick={() => { setSortBy("distance"); setShowAll(false); }}
+            className={`flex-1 text-xs py-1 rounded-lg font-semibold transition-colors ${sortBy === "distance" ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200 hover:border-blue-300"}`}
+          >
+            📍 מרחק
+          </button>
+        </div>
+      )}
+
       {/* List */}
       {!collapsed && (
         <div className="overflow-y-auto max-h-[35vh] md:max-h-[60vh]">
-          {sorted.map((s, i) => {
+          {visible.map((s, i) => {
             const isCheapest = minPrice != null && s.pricePerKwh === minPrice;
             const gUrl = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`;
             const wUrl = `https://waze.com/ul?ll=${s.lat},${s.lng}&navigate=yes`;
@@ -135,6 +158,22 @@ export default function CheapTable({
               </div>
             );
           })}
+          {!showAll && sorted.length > PAGE_SIZE && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="w-full py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors border-t border-gray-100"
+            >
+              הצג עוד {sorted.length - PAGE_SIZE} תחנות ▼
+            </button>
+          )}
+          {showAll && sorted.length > PAGE_SIZE && (
+            <button
+              onClick={() => setShowAll(false)}
+              className="w-full py-2.5 text-xs font-semibold text-gray-400 hover:bg-gray-50 transition-colors border-t border-gray-100"
+            >
+              הצג פחות ▲
+            </button>
+          )}
         </div>
       )}
     </div>
