@@ -20,6 +20,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [celloProviders, setCelloProviders] = useState<CelloProvider[]>([]);
   const [pinCounts, setPinCounts] = useState<Record<string, number>>({});
+  const [showInfo, setShowInfo] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -191,6 +192,55 @@ export default function Home() {
       {/* Map */}
       <main className="flex-1 relative overflow-hidden">
         <MapView filter={filter} provider={provider} center={center} radiusKm={radiusKm} onPinCounts={setPinCounts} />
+
+        {/* Info button */}
+        <button
+          onClick={() => setShowInfo(true)}
+          className="absolute bottom-4 right-4 z-[1000] w-9 h-9 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-blue-600 font-bold text-base hover:bg-blue-50 transition-colors"
+          title="מידע ויצירת קשר"
+        >
+          i
+        </button>
+
+        {/* Info modal */}
+        {showInfo && (
+          <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/40" onClick={() => setShowInfo(false)}>
+            <div
+              className="bg-white rounded-2xl shadow-2xl p-6 mx-4 w-full max-w-sm text-right"
+              dir="rtl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+                <h2 className="font-bold text-gray-800 text-base">מידע ויצירת קשר</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">לתגובות, הצעות לשיפור או דיווח על תקלות:</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">👤</span>
+                  <span className="text-sm font-semibold text-gray-700">צביקה מאייר</span>
+                </div>
+                <a
+                  href="mailto:1zvika1@gmail.com"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <span className="text-lg">📧</span>
+                  <span className="text-sm text-blue-700 font-medium">1zvika1@gmail.com</span>
+                </a>
+                <a
+                  href="https://wa.me/972545484438"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                  <span className="text-lg">💬</span>
+                  <span className="text-sm text-emerald-700 font-medium">WhatsApp — 054-548-4438</span>
+                </a>
+              </div>
+              <p className="text-xs text-gray-400 mt-4 text-center">vcharge.co.il</p>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
