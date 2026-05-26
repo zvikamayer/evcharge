@@ -496,8 +496,8 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
           <div>
-            <div className="text-sm font-semibold text-gray-700">מחפש עמדות...</div>
-            <div className="text-xs text-gray-400 mt-0.5">אנא המתן רגע</div>
+            <div className="text-sm font-semibold text-gray-700">מחפש עמדות טעינה...</div>
+            <div className="text-xs text-gray-400 mt-0.5">מסנכרן נתונים חיים מכל ספקי הטעינה בישראל</div>
           </div>
         </div>
       )}
