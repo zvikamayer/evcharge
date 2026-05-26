@@ -70,6 +70,8 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const circle = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const centerMarker = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markerMap = useRef<Record<string, { marker: any; pin: Pin }>>({});
 
   const [selected, setSelected] = useState<LocationDetail | null>(null);
@@ -109,6 +111,25 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
 
     // Zoom + pan to fit the radius circle
     map.current.fitBounds(circle.current.getBounds(), { padding: [24, 24], animate: true });
+
+    // Center / "you are here" pin
+    if (centerMarker.current) centerMarker.current.remove();
+    centerMarker.current = L.current.marker([c.lat, c.lng], {
+      icon: L.current.divIcon({
+        className: "",
+        html: `
+          <div style="position:relative;width:32px;height:40px">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40">
+              <path d="M16 0C9.37 0 4 5.37 4 12c0 9 12 28 12 28S28 21 28 12C28 5.37 22.63 0 16 0z"
+                fill="#1d4ed8" stroke="#fff" stroke-width="1.5"/>
+              <circle cx="16" cy="12" r="5" fill="#fff"/>
+            </svg>
+          </div>`,
+        iconSize: [32, 40],
+        iconAnchor: [16, 40],
+      }),
+      zIndexOffset: 1000,
+    }).addTo(map.current);
 
     // Fetch pins from all providers in parallel (all via server-side proxies to avoid CORS)
     const bb = boundingBox(c.lat, c.lng, r);
