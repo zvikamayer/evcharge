@@ -21,6 +21,7 @@ export default function Home() {
   const [celloProviders, setCelloProviders] = useState<CelloProvider[]>([]);
   const [pinCounts, setPinCounts] = useState<Record<string, number>>({});
   const [showInfo, setShowInfo] = useState(false);
+  const [infoTab, setInfoTab] = useState<"contact" | "about">("contact");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -206,38 +207,64 @@ export default function Home() {
         {showInfo && (
           <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/40" onClick={() => setShowInfo(false)}>
             <div
-              className="bg-white rounded-2xl shadow-2xl p-6 mx-4 w-full max-w-sm text-right"
+              className="bg-white rounded-2xl shadow-2xl mx-4 w-full max-w-sm text-right overflow-hidden"
               dir="rtl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
-                <h2 className="font-bold text-gray-800 text-base">מידע ויצירת קשר</h2>
+                <h2 className="font-bold text-gray-800 text-base">⚡ vcharge.co.il</h2>
               </div>
-              <p className="text-sm text-gray-500 mb-4">לתגובות, הצעות לשיפור או דיווח על תקלות:</p>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">👤</span>
-                  <span className="text-sm font-semibold text-gray-700">צביקה מאייר</span>
-                </div>
-                <a
-                  href="mailto:1zvika1@gmail.com"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors"
+
+              {/* Tabs */}
+              <div className="flex border-b border-gray-100 px-5">
+                <button
+                  onClick={() => setInfoTab("contact")}
+                  className={`flex-1 py-2 text-sm font-semibold border-b-2 transition-colors ${infoTab === "contact" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-400"}`}
                 >
-                  <span className="text-lg">📧</span>
-                  <span className="text-sm text-blue-700 font-medium">1zvika1@gmail.com</span>
-                </a>
-                <a
-                  href="https://wa.me/972545484438"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                  צור קשר
+                </button>
+                <button
+                  onClick={() => setInfoTab("about")}
+                  className={`flex-1 py-2 text-sm font-semibold border-b-2 transition-colors ${infoTab === "about" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-400"}`}
                 >
-                  <span className="text-lg">💬</span>
-                  <span className="text-sm text-emerald-700 font-medium">WhatsApp — 054-548-4438</span>
-                </a>
+                  אודות
+                </button>
               </div>
-              <p className="text-xs text-gray-400 mt-4 text-center">vcharge.co.il</p>
+
+              <div className="p-5">
+                {infoTab === "contact" ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-500 mb-3">לתגובות, הצעות לשיפור או דיווח על תקלות:</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">👤</span>
+                      <span className="text-sm font-semibold text-gray-700">צביקה מאייר</span>
+                    </div>
+                    <a href="mailto:1zvika1@gmail.com" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors">
+                      <span className="text-lg">📧</span>
+                      <span className="text-sm text-blue-700 font-medium">1zvika1@gmail.com</span>
+                    </a>
+                    <a href="https://wa.me/972545484438" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                      <span className="text-lg">💬</span>
+                      <span className="text-sm text-emerald-700 font-medium">WhatsApp — 054-548-4438</span>
+                    </a>
+                  </div>
+                ) : (
+                  <div className="space-y-3 text-sm text-gray-600 leading-relaxed">
+                    <p>
+                      <span className="font-semibold text-gray-800">vcharge.co.il</span> הוא שירות עצמאי לאיתור עמדות טעינה לרכב חשמלי בישראל. האתר מרכז מידע ממקורות ציבוריים לנוחות המשתמש בלבד.
+                    </p>
+                    <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
+                      <span className="font-semibold text-gray-500">הגבלת אחריות: </span>
+                      המידע המוצג באתר נלקח ממקורות חיצוניים ועשוי להיות חלקי, לא מדויק או לא מעודכן. האתר אינו אחראי לנכונות המידע, לזמינות העמדות, למחירים המוצגים או לכל נזק שייגרם כתוצאה משימוש במידע זה. האתר אינו קשור ואינו מייצג את חברות הטעינה המופיעות בו.
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      השימוש באתר מהווה הסכמה לתנאים אלו.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
