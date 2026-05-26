@@ -11,8 +11,6 @@ function pinColor(av: Pin["av"]) {
   return "#ef4444";
 }
 
-const EV_BASE = "https://cp.evedge.co.il/api/v1/app";
-
 const cache: Record<string, LocationDetail> = {};
 async function fetchLocation(id: number | string, source?: "greenspot" | "cellocharge"): Promise<LocationDetail> {
   const key = source === "greenspot" ? `gs-${id}` : source === "cellocharge" ? `cello-${id}` : `ev-${id}`;
@@ -21,7 +19,7 @@ async function fetchLocation(id: number | string, source?: "greenspot" | "celloc
     ? `/api/gs/station/${id}`
     : source === "cellocharge"
     ? `/api/cello/station/${id}`
-    : `${EV_BASE}/locations/${id}`;
+    : `/api/location/${id}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   cache[key] = await res.json();
@@ -82,7 +80,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       weight: 2,
     }).addTo(map.current);
 
-    // Fetch pins from all providers in parallel
+    // Fetch pins from all providers in parallel (all via server-side proxies to avoid CORS)
     const bb = boundingBox(c.lat, c.lng, r);
     const qs = `minLat=${bb.minLat}&maxLat=${bb.maxLat}&minLng=${bb.minLng}&maxLng=${bb.maxLng}`;
     const p = providerRef.current;
@@ -92,14 +90,21 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     const wantGs = p === "all" || p === "greenspot";
     const wantCello = p === "all" || !isStaticProvider;
     const celloProviderParam = !isStaticProvider ? `&providerId=${encodeURIComponent(p)}` : "";
-    const [evRes, gsRes, celloRes] = await Promise.all([
-      wantEv ? fetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`) : Promise.resolve(null),
-      wantGs ? fetch(`/api/gs/pins?${qs}`) : Promise.resolve(null),
-      wantCello ? fetch(`/api/cello/pins?${qs}${celloProviderParam}`) : Promise.resolve(null),
-    ]);
-    const evPins: Pin[] = evRes ? (await evRes.json().then((d: { pins?: Pin[] }) => d.pins ?? []).catch(() => [])) : [];
-    const gsPins: Pin[] = gsRes ? await gsRes.json().catch(() => []) : [];
-    const celloPins: Pin[] = celloRes ? await celloRes.json().catch(() => []) : [];
+    let evPins: Pin[] = [];
+    let gsPins: Pin[] = [];
+    let celloPins: Pin[] = [];
+    try {
+      const [evRes, gsRes, celloRes] = await Promise.all([
+        wantEv ? fetch(`/api/pins?${qs}`) : Promise.resolve(null),
+        wantGs ? fetch(`/api/gs/pins?${qs}`) : Promise.resolve(null),
+        wantCello ? fetch(`/api/cello/pins?${qs}${celloProviderParam}`) : Promise.resolve(null),
+      ]);
+      evPins = evRes ? await evRes.json().catch(() => []) : [];
+      gsPins = gsRes ? await gsRes.json().catch(() => []) : [];
+      celloPins = celloRes ? await celloRes.json().catch(() => []) : [];
+    } catch {
+      // Network error — continue with whatever we have (may be empty)
+    }
     const pins: Pin[] = [...evPins, ...gsPins, ...celloPins];
 
     const inRadius = pins.filter((p) => {
@@ -222,46 +227,49 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
 
     setTableLoading(true);
     setTableRows([]);
-    const rowsRaw = await Promise.all(
-      sorted.map(async ({ pin, dist }) => {
-        try {
-          const [pinLat, pinLng] = pin.geo.split(",").map(Number);
-          const detail = await fetchLocation(pin.id, pin.source);
-          const loc = detail.locations[0];
-          if (!loc) return null;
-          const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const evses = loc.zones.flatMap((z: any) => z.evses);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const available = evses.filter((e: any) => e.isAvailable).length;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
-          const chargeType: "ac" | "dc" | "mixed" | undefined =
-            types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : undefined;
-          return {
-            id: pin.id,
-            source: pin.source,
-            providerName: pin.providerName,
-            name: loc.name,
-            address: loc.address,
-            distanceKm: dist,
-            pricePerKwh: prices.length ? Math.min(...prices) : null,
-            available,
-            total: evses.length,
-            lat: pinLat,
-            lng: pinLng,
-            chargeType,
-          } as StationRow;
-        } catch {
-          return null;
-        }
-      })
-    );
-    const rows: StationRow[] = rowsRaw.filter((r): r is StationRow => r !== null);
-    setTableRows(rows);
-    setTableLoading(false);
+    try {
+      const rowsRaw = await Promise.all(
+        sorted.map(async ({ pin, dist }) => {
+          try {
+            const [pinLat, pinLng] = pin.geo.split(",").map(Number);
+            const detail = await fetchLocation(pin.id, pin.source);
+            const loc = detail.locations[0];
+            if (!loc) return null;
+            const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const evses = loc.zones.flatMap((z: any) => z.evses);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const available = evses.filter((e: any) => e.isAvailable).length;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
+            const chargeType: "ac" | "dc" | "mixed" | undefined =
+              types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : undefined;
+            return {
+              id: pin.id,
+              source: pin.source,
+              providerName: pin.providerName,
+              name: loc.name,
+              address: loc.address,
+              distanceKm: dist,
+              pricePerKwh: prices.length ? Math.min(...prices) : null,
+              available,
+              total: evses.length,
+              lat: pinLat,
+              lng: pinLng,
+              chargeType,
+            } as StationRow;
+          } catch {
+            return null;
+          }
+        })
+      );
+      const rows: StationRow[] = rowsRaw.filter((r): r is StationRow => r !== null);
+      setTableRows(rows);
+    } finally {
+      setTableLoading(false);
+    }
   }, []);
 
   // Trigger refresh when props change
@@ -312,7 +320,18 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       document.head.appendChild(script);
     }
 
+    // Invalidate Leaflet size whenever the container is resized
+    // (e.g. when the header collapses after GPS/search)
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && mapRef.current) {
+      ro = new ResizeObserver(() => {
+        map.current?.invalidateSize();
+      });
+      ro.observe(mapRef.current);
+    }
+
     return () => {
+      ro?.disconnect();
       if (map.current) {
         map.current.remove();
         map.current = null;
