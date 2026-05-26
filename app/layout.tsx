@@ -6,7 +6,7 @@ const GA_ID = "G-V89H3K3Y4G";
 
 export const metadata: Metadata = {
   title: "vcharge — עמדות טעינה לרכב חשמלי",
-  description: "מצא עמדות טעינה פנויות וזולות בקרבתך — EV-Edge, GreenSpot, CelloCharge ועוד",
+  description: "מצא עמדות טעינה פנויות וזולות לרכב חשמלי בקרבתך — בדוק זמינות ומחירים בזמן אמת",
 };
 
 export const viewport: Viewport = {
