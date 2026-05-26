@@ -252,13 +252,9 @@ export default function Home() {
                       <span className="text-lg">👤</span>
                       <span className="text-sm font-semibold text-gray-700">צביקה מאייר</span>
                     </div>
-                    <a href="mailto:1zvika1@gmail.com" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors">
+                    <a href="mailto:vcharge.info@gmail.com" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors">
                       <span className="text-lg">📧</span>
-                      <span className="text-sm text-blue-700 font-medium">1zvika1@gmail.com</span>
-                    </a>
-                    <a href="https://wa.me/972545484438" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors">
-                      <span className="text-lg">💬</span>
-                      <span className="text-sm text-emerald-700 font-medium">WhatsApp — 054-548-4438</span>
+                      <span className="text-sm text-blue-700 font-medium">vcharge.info@gmail.com</span>
                     </a>
                   </div>
                 ) : (
