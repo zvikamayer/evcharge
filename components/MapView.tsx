@@ -498,7 +498,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
           <div>
             <div className="text-sm font-semibold text-gray-700">מחפש עמדות טעינה...</div>
             <div className="text-xs text-gray-400 mt-0.5">מסנכרן נתונים חיים מכל ספקי הטעינה בישראל</div>
-            <div className="text-xs text-gray-300 mt-0.5">עשוי לקחת מספר שניות — זה תקין ✓</div>
+            <div className="text-xs text-gray-300 mt-0.5">עשוי לקחת מספר דקות — זה תקין ✓</div>
           </div>
         </div>
       )}
