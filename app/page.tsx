@@ -14,7 +14,7 @@ export default function Home() {
   const [filter, setFilter] = useState("all");
   const [provider, setProvider] = useState("all");
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
-  const [radiusKm, setRadiusKm] = useState(5);
+  const [radiusKm, setRadiusKm] = useState(1);
   const [address, setAddress] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState("");
