@@ -7,6 +7,13 @@ export interface Pin {
   providerId?: string;
   geo: string;
   av: { ava: number; unk: number; occ?: number; una?: number };
+  /** Rich data embedded in the pin — when present, skip the detail API call */
+  inlineData?: {
+    name: string;
+    address: string;
+    pricePerKwh: number | null;
+    total: number;
+  };
 }
 
 export interface Evse {

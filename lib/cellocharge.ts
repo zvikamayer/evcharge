@@ -120,6 +120,15 @@ export async function getCelloPins(
             (loc.connectorsSummary.occupied ?? 0),
         ),
       },
+      // Embed rich data so MapView can build table rows without a detail API call
+      inlineData: {
+        name: loc.name,
+        address: `${loc.address}${loc.city ? ", " + loc.city : ""}`,
+        pricePerKwh: (loc.tariffsSummary.maxPerKwh ?? 0) > 0
+          ? loc.tariffsSummary.maxPerKwh
+          : null,
+        total: loc.connectorsSummary.total || 1,
+      },
     };
     });
 }

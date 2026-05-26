@@ -12,11 +12,32 @@ function pinColor(av: Pin["av"]) {
 }
 
 const EV_BASE = "https://cp.evedge.co.il/api/v1/app";
+const LS_PREFIX = "vcharge_loc_";
+const LS_TTL_MS = 5 * 60 * 1000; // 5 min localStorage TTL for EV-Edge details
 
 const cache: Record<string, LocationDetail> = {};
+
+function lsGet(key: string): LocationDetail | null {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > LS_TTL_MS) { localStorage.removeItem(LS_PREFIX + key); return null; }
+    return data as LocationDetail;
+  } catch { return null; }
+}
+function lsSet(key: string, data: LocationDetail) {
+  try { localStorage.setItem(LS_PREFIX + key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+
 async function fetchLocation(id: number | string, source?: "greenspot" | "cellocharge"): Promise<LocationDetail> {
   const key = source === "greenspot" ? `gs-${id}` : source === "cellocharge" ? `cello-${id}` : `ev-${id}`;
   if (cache[key]) return cache[key];
+  // Check localStorage cache for EV-Edge (browser-side, 5 min TTL)
+  if (!source) {
+    const ls = lsGet(key);
+    if (ls) { cache[key] = ls; return ls; }
+  }
   // EV-Edge is fetched client-side (has CORS headers); GreenSpot & CelloCharge via server proxy
   const url = source === "greenspot"
     ? `/api/gs/station/${id}`
@@ -25,8 +46,10 @@ async function fetchLocation(id: number | string, source?: "greenspot" | "celloc
     : `${EV_BASE}/locations/${id}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  cache[key] = await res.json();
-  return cache[key];
+  const data: LocationDetail = await res.json();
+  cache[key] = data;
+  if (!source) lsSet(key, data); // persist EV-Edge details
+  return data;
 }
 
 interface Props {
@@ -222,60 +245,98 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       });
     });
 
-    // Build price table: all CelloCharge in radius (cached, no extra calls) + closest 40 for EV-Edge/GreenSpot
+    // ── Build price table ────────────────────────────────────────────────────
+    // Strategy:
+    //   Phase 1 (instant)  – CelloCharge pins carry all needed data inline.
+    //                        Build those rows immediately, hide spinner, show table.
+    //   Phase 2 (background) – EV-Edge / GreenSpot need individual API calls.
+    //                        Add rows incrementally as they resolve.
     const withDist = [...inRadius].map((p) => {
       const [lat, lng] = p.geo.split(",").map(Number);
       return { pin: p, dist: haversineKm(c.lat, c.lng, lat, lng) };
     });
-    const celloRows = withDist.filter(({ pin }) => pin.source === "cellocharge");
-    const otherRows = withDist
-      .filter(({ pin }) => pin.source !== "cellocharge")
+
+    // Phase 1: rows with inline data (no API call needed)
+    const inlineRows: StationRow[] = withDist
+      .filter(({ pin }) => pin.inlineData)
+      .map(({ pin, dist }) => {
+        const [pinLat, pinLng] = pin.geo.split(",").map(Number);
+        const d = pin.inlineData!;
+        return {
+          id: pin.id,
+          source: pin.source,
+          providerName: pin.providerName,
+          name: d.name,
+          address: d.address,
+          distanceKm: dist,
+          pricePerKwh: d.pricePerKwh,
+          available: pin.av.ava,
+          total: d.total,
+          lat: pinLat,
+          lng: pinLng,
+          chargeType: undefined,
+        } as StationRow;
+      });
+
+    // Show CelloCharge rows immediately — dismiss spinner
+    setTableRows(inlineRows);
+    setTableLoading(false);
+
+    // Phase 2: rows that need an API call (EV-Edge, GreenSpot) — closest 40
+    const apiItems = withDist
+      .filter(({ pin }) => !pin.inlineData)
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 40);
-    const sorted = [...otherRows, ...celloRows];
 
-    try {
-      const rowsRaw = await Promise.all(
-        sorted.map(async ({ pin, dist }) => {
-          try {
-            const [pinLat, pinLng] = pin.geo.split(",").map(Number);
-            const detail = await fetchLocation(pin.id, pin.source);
-            const loc = detail.locations[0];
-            if (!loc) return null;
-            const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const evses = loc.zones.flatMap((z: any) => z.evses);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const available = evses.filter((e: any) => e.isAvailable).length;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
-            const chargeType: "ac" | "dc" | "mixed" | undefined =
-              types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : undefined;
-            return {
-              id: pin.id,
-              source: pin.source,
-              providerName: pin.providerName,
-              name: loc.name,
-              address: loc.address,
-              distanceKm: dist,
-              pricePerKwh: prices.length ? Math.min(...prices) : null,
-              available,
-              total: evses.length,
-              lat: pinLat,
-              lng: pinLng,
-              chargeType,
-            } as StationRow;
-          } catch {
-            return null;
-          }
-        })
-      );
-      const rows: StationRow[] = rowsRaw.filter((r): r is StationRow => r !== null);
-      setTableRows(rows);
-    } finally {
-      setTableLoading(false);
+    if (apiItems.length > 0) {
+      // Helper to build a single row via API
+      const buildApiRow = async ({ pin, dist }: typeof apiItems[0]): Promise<StationRow | null> => {
+        try {
+          const [pinLat, pinLng] = pin.geo.split(",").map(Number);
+          const detail = await fetchLocation(pin.id, pin.source);
+          const loc = detail.locations[0];
+          if (!loc) return null;
+          const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const evses = loc.zones.flatMap((z: any) => z.evses);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const available = evses.filter((e: any) => e.isAvailable).length;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
+          const chargeType: "ac" | "dc" | "mixed" | undefined =
+            types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : undefined;
+          return {
+            id: pin.id,
+            source: pin.source,
+            providerName: pin.providerName,
+            name: loc.name,
+            address: loc.address,
+            distanceKm: dist,
+            pricePerKwh: prices.length ? Math.min(...prices) : null,
+            available,
+            total: evses.length,
+            lat: pinLat,
+            lng: pinLng,
+            chargeType,
+          } as StationRow;
+        } catch {
+          return null;
+        }
+      };
+
+      // Fire all in parallel; each resolves independently and updates the table
+      apiItems.forEach(async (item) => {
+        const row = await buildApiRow(item);
+        if (row) {
+          setTableRows((prev) => {
+            // Avoid duplicates if refresh was called again
+            const exists = prev.some((r) => r.id === row.id && r.source === row.source);
+            return exists ? prev : [...prev, row];
+          });
+        }
+      });
     }
   }, []);
 
