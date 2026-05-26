@@ -11,15 +11,18 @@ function pinColor(av: Pin["av"]) {
   return "#ef4444";
 }
 
+const EV_BASE = "https://cp.evedge.co.il/api/v1/app";
+
 const cache: Record<string, LocationDetail> = {};
 async function fetchLocation(id: number | string, source?: "greenspot" | "cellocharge"): Promise<LocationDetail> {
   const key = source === "greenspot" ? `gs-${id}` : source === "cellocharge" ? `cello-${id}` : `ev-${id}`;
   if (cache[key]) return cache[key];
+  // EV-Edge is fetched client-side (has CORS headers); GreenSpot & CelloCharge via server proxy
   const url = source === "greenspot"
     ? `/api/gs/station/${id}`
     : source === "cellocharge"
     ? `/api/cello/station/${id}`
-    : `/api/location/${id}`;
+    : `${EV_BASE}/locations/${id}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   cache[key] = await res.json();
@@ -94,21 +97,23 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     const wantGs = p === "all" || p === "greenspot";
     const wantCello = p === "all" || !isStaticProvider;
     const celloProviderParam = !isStaticProvider ? `&providerId=${encodeURIComponent(p)}` : "";
-    let evPins: Pin[] = [];
-    let gsPins: Pin[] = [];
-    let celloPins: Pin[] = [];
-    try {
-      const [evRes, gsRes, celloRes] = await Promise.all([
-        wantEv ? fetch(`/api/pins?${qs}`) : Promise.resolve(null),
-        wantGs ? fetch(`/api/gs/pins?${qs}`) : Promise.resolve(null),
-        wantCello ? fetch(`/api/cello/pins?${qs}${celloProviderParam}`) : Promise.resolve(null),
-      ]);
-      evPins = evRes ? await evRes.json().catch(() => []) : [];
-      gsPins = gsRes ? await gsRes.json().catch(() => []) : [];
-      celloPins = celloRes ? await celloRes.json().catch(() => []) : [];
-    } catch {
-      // Network error — continue with whatever we have (may be empty)
-    }
+    // Fetch each provider independently so one failure doesn't block the others.
+    // EV-Edge is fetched client-side (has CORS headers; Vercel IPs are blocked by their API).
+    // GreenSpot & CelloCharge go through server-side proxies.
+    const [evPins, gsPins, celloPins] = await Promise.all([
+      wantEv
+        ? fetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`)
+            .then((r) => r.json()).then((d: { pins?: Pin[] }) => d.pins ?? []).catch(() => [] as Pin[])
+        : ([] as Pin[]),
+      wantGs
+        ? fetch(`/api/gs/pins?${qs}`)
+            .then((r) => r.json()).catch(() => [] as Pin[])
+        : ([] as Pin[]),
+      wantCello
+        ? fetch(`/api/cello/pins?${qs}${celloProviderParam}`)
+            .then((r) => r.json()).catch(() => [] as Pin[])
+        : ([] as Pin[]),
+    ]);
     const pins: Pin[] = [...evPins, ...gsPins, ...celloPins];
 
     const inRadius = pins.filter((p) => {
