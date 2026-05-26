@@ -251,17 +251,22 @@ export default function Home() {
                     </a>
                   </div>
                 ) : (
-                  <div className="space-y-3 text-sm text-gray-600 leading-relaxed">
+                  <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
                     <p>
-                      <span className="font-semibold text-gray-800">vcharge.co.il</span> הוא שירות עצמאי לאיתור עמדות טעינה לרכב חשמלי בישראל. האתר מרכז מידע ממקורות ציבוריים לנוחות המשתמש בלבד.
+                      <span className="font-semibold text-gray-800">vcharge.co.il</span> הוא שירות עצמאי לאיתור ומציאת עמדות טעינה לרכב חשמלי בישראל. האתר מרכז מידע ממקורות שונים לנוחות המשתמש בלבד ואינו קשור, שותף או מייצג את חברות הטעינה המופיעות בו.
                     </p>
-                    <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
-                      <span className="font-semibold text-gray-500">הגבלת אחריות: </span>
-                      המידע המוצג באתר נלקח ממקורות חיצוניים ועשוי להיות חלקי, לא מדויק או לא מעודכן. האתר אינו אחראי לנכונות המידע, לזמינות העמדות, למחירים המוצגים או לכל נזק שייגרם כתוצאה משימוש במידע זה. האתר אינו קשור ואינו מייצג את חברות הטעינה המופיעות בו.
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      השימוש באתר מהווה הסכמה לתנאים אלו.
-                    </p>
+                    <div className="border-t border-gray-100 pt-3 space-y-2">
+                      <p className="font-semibold text-gray-700 text-xs">הגבלת אחריות</p>
+                      <p className="text-xs text-gray-500">
+                        המידע המוצג באתר — לרבות מיקומי עמדות, מחירים, זמינות ומפרטים טכניים — מגיע ממקורות צד שלישי ועשוי להיות חלקי, שגוי או לא מעודכן. האתר <span className="font-semibold">אינו מתחייב</span> לנכונות המידע, לרציפות השירות, או לזמינות העמדות בפועל.
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        עמדות הטעינה מופעלות על ידי <span className="font-semibold">חברות צד שלישי בלבד</span>. האתר אינו אחראי לתקינות העמדות, לתנאי השימוש בהן, לגביית תשלומים, או לכל נזק ישיר, עקיף או תוצאתי שייגרם כתוצאה מהסתמכות על המידע באתר.
+                      </p>
+                      <p className="text-xs text-gray-400 pt-1">
+                        השימוש באתר הוא על אחריות המשתמש בלבד ומהווה הסכמה מלאה לתנאים אלו.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
