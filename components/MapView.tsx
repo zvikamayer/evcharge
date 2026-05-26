@@ -67,6 +67,10 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
   ) => {
     if (!mapReady.current || !L.current || !map.current) return;
 
+    // Show loading indicator immediately — pin fetching can be slow on mobile
+    setTableLoading(true);
+    setTableRows([]);
+
     // Pan map
     map.current.panTo([c.lat, c.lng]);
 
@@ -225,8 +229,6 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       .slice(0, 40);
     const sorted = [...otherRows, ...celloRows];
 
-    setTableLoading(true);
-    setTableRows([]);
     try {
       const rowsRaw = await Promise.all(
         sorted.map(async ({ pin, dist }) => {
@@ -427,7 +429,10 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          <span className="text-sm font-medium text-gray-600">טוען תחנות...</span>
+          <div>
+            <div className="text-sm font-semibold text-gray-700">מחפש עמדות...</div>
+            <div className="text-xs text-gray-400 mt-0.5">אנא המתן רגע</div>
+          </div>
         </div>
       )}
       {!tableLoading && tableRows.length > 0 && (
