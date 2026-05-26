@@ -74,10 +74,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     setTableLoading(true);
     setTableRows([]);
 
-    // Pan map
-    map.current.panTo([c.lat, c.lng]);
-
-    // Draw circle
+    // Draw circle first so we can fitBounds on it
     if (circle.current) circle.current.remove();
     circle.current = L.current.circle([c.lat, c.lng], {
       radius: r * 1000,
@@ -86,6 +83,9 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       fillOpacity: 0.08,
       weight: 2,
     }).addTo(map.current);
+
+    // Zoom + pan to fit the radius circle
+    map.current.fitBounds(circle.current.getBounds(), { padding: [24, 24], animate: true });
 
     // Fetch pins from all providers in parallel (all via server-side proxies to avoid CORS)
     const bb = boundingBox(c.lat, c.lng, r);
