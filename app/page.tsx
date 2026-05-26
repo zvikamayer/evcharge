@@ -22,6 +22,7 @@ export default function Home() {
   const [pinCounts, setPinCounts] = useState<Record<string, number>>({});
   const [showInfo, setShowInfo] = useState(false);
   const [infoTab, setInfoTab] = useState<"contact" | "about">("contact");
+  const [headerExpanded, setHeaderExpanded] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function Home() {
         setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setAddress("המיקום שלי");
         setGeoLoading(false);
+        setHeaderExpanded(false);
       },
       () => {
         setError("לא ניתן לקבל מיקום");
@@ -61,6 +63,7 @@ export default function Home() {
     const data = await res.json();
     setCenter({ lat: data.lat, lng: data.lng });
     setGeoLoading(false);
+    setHeaderExpanded(false);
   };
 
   const allProviders = [
@@ -70,125 +73,133 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100" dir="rtl">
+    <div className="flex flex-col bg-gray-100" style={{ height: "100dvh" }} dir="rtl">
       {/* Header */}
-      <header className="bg-white shadow-md px-4 pt-3 pb-2 z-10 space-y-2.5">
-        {/* Title row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 text-white rounded-xl p-1.5 leading-none text-lg">⚡</div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800 leading-tight">עמדות טעינה</h1>
-            </div>
+      <header className="bg-white shadow-md z-10">
+        {/* Always-visible title row */}
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="bg-blue-600 text-white rounded-xl p-1.5 leading-none text-base shrink-0">⚡</div>
+            <h1 className="text-base font-bold text-gray-800 leading-tight truncate">עמדות טעינה</h1>
+            {center && !headerExpanded && (
+              <span className="text-xs text-gray-400 truncate hidden sm:block">{address}</span>
+            )}
           </div>
-          {/* Status filters */}
-          <div className="flex gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setFilter("all")}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === "all" ? "bg-gray-800 text-white shadow-sm" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+              className={`px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === "all" ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-500"}`}
             >
               הכל
             </button>
             <button
               onClick={() => setFilter("available")}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === "available" ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+              className={`px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === "available" ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"}`}
             >
               ✓ פנויות
+            </button>
+            <button
+              onClick={() => setHeaderExpanded((v) => !v)}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs"
+            >
+              {headerExpanded ? "▲" : "▼"}
             </button>
           </div>
         </div>
 
-        {/* Provider filters — scrollable */}
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-          {allProviders.map(({ id, label }) => {
-            const count = pinCounts[id];
-            return (
+        {/* Collapsible section */}
+        {headerExpanded && (
+          <div className="px-3 pb-2.5 space-y-2 border-t border-gray-50">
+            {/* Provider filters */}
+            <div className="flex gap-1.5 overflow-x-auto pt-2 pb-0.5 scrollbar-hide">
+              {allProviders.map(({ id, label }) => {
+                const count = pinCounts[id];
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setProvider((cur) => cur === id && id !== "all" ? "all" : id)}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
+                      provider === id
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-gray-500 border-gray-200"
+                    }`}
+                  >
+                    {label}
+                    {count != null && count > 0 && (
+                      <span className={`text-[10px] font-semibold px-1 rounded-full ${
+                        provider === id ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400"
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Search row */}
+            <div className="flex gap-2">
+              <div className="flex flex-1 items-center gap-1 bg-gray-100 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-blue-400 focus-within:bg-white transition-all">
+                <span className="text-gray-400 text-sm">🔍</span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && searchAddress()}
+                  placeholder="הכנס כתובת..."
+                  className="flex-1 bg-transparent focus:outline-none text-gray-700 placeholder-gray-400"
+                  style={{ fontSize: "16px" }}
+                />
+              </div>
               <button
-                key={id}
-                onClick={() => setProvider((cur) => cur === id && id !== "all" ? "all" : id)}
-                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
-                  provider === id
-                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                    : "bg-white text-gray-500 border-gray-200 hover:border-blue-300"
-                }`}
+                onClick={searchAddress}
+                disabled={geoLoading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
               >
-                {label}
-                {count != null && count > 0 && (
-                  <span className={`text-[10px] font-semibold px-1 rounded-full ${
-                    provider === id ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400"
-                  }`}>
-                    {count}
-                  </span>
-                )}
+                {geoLoading ? "..." : "חפש"}
               </button>
-            );
-          })}
-        </div>
+              <button
+                onClick={useMyLocation}
+                disabled={geoLoading}
+                title="מיקום נוכחי"
+                className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl text-sm disabled:opacity-50 transition-colors border border-gray-200"
+              >
+                📍
+              </button>
+            </div>
 
-        {/* Search row */}
-        <div className="flex gap-2">
-          <div className="flex flex-1 items-center gap-1 bg-gray-100 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-blue-400 focus-within:bg-white transition-all">
-            <span className="text-gray-400 text-sm">🔍</span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && searchAddress()}
-              placeholder="הכנס כתובת..."
-              className="flex-1 bg-transparent text-sm focus:outline-none text-gray-700 placeholder-gray-400"
-            />
+            {/* Radius slider */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 shrink-0">רדיוס</span>
+              <input
+                type="range"
+                min={1}
+                max={30}
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                className="flex-1 accent-blue-600 h-1.5"
+              />
+              <span className="text-sm font-bold text-blue-600 w-14 text-center shrink-0 bg-blue-50 rounded-lg py-0.5">
+                {radiusKm} ק״מ
+              </span>
+            </div>
+
+            {error && <p className="text-xs text-red-500 flex items-center gap-1"><span>⚠</span>{error}</p>}
+            {!center && !error && (
+              <p className="text-xs text-gray-400 text-center">הכנס כתובת או לחץ 📍 כדי להתחיל</p>
+            )}
           </div>
-          <button
-            onClick={searchAddress}
-            disabled={geoLoading}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
-          >
-            {geoLoading ? "..." : "חפש"}
-          </button>
-          <button
-            onClick={useMyLocation}
-            disabled={geoLoading}
-            title="מיקום נוכחי"
-            className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl text-sm disabled:opacity-50 transition-colors border border-gray-200"
-          >
-            📍
-          </button>
-        </div>
-
-        {/* Radius slider */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400 shrink-0 w-10">רדיוס</span>
-          <input
-            type="range"
-            min={1}
-            max={30}
-            value={radiusKm}
-            onChange={(e) => setRadiusKm(Number(e.target.value))}
-            className="flex-1 accent-blue-600 h-1.5"
-          />
-          <span className="text-sm font-bold text-blue-600 w-14 text-center shrink-0 bg-blue-50 rounded-lg py-0.5">
-            {radiusKm} ק״מ
-          </span>
-        </div>
-
-        {error && (
-          <p className="text-xs text-red-500 flex items-center gap-1">
-            <span>⚠</span>{error}
-          </p>
         )}
-        {!center && !error && (
-          <p className="text-xs text-gray-400 text-center pb-0.5">הכנס כתובת או לחץ 📍 כדי להתחיל</p>
-        )}
+
+        {/* Legend — compact, always visible */}
+        <div className="flex gap-3 px-3 py-1.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 overflow-x-auto scrollbar-hide">
+          <span className="flex items-center gap-1 shrink-0"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />פנויה</span>
+          <span className="flex items-center gap-1 shrink-0"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />לא ידוע</span>
+          <span className="flex items-center gap-1 shrink-0"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />תפוסה</span>
+          <span className="flex items-center gap-1 shrink-0 text-amber-500">★ הזולה ביותר</span>
+        </div>
       </header>
-
-      {/* Legend */}
-      <div className="flex gap-4 px-4 py-1.5 bg-white border-b border-gray-100 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />פנויה</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />לא ידוע</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />תפוסה</span>
-        <span className="flex items-center gap-1.5 text-amber-500">★ הזולה ביותר</span>
-      </div>
 
       {/* Map */}
       <main className="flex-1 relative overflow-hidden">
