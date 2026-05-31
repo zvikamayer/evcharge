@@ -162,8 +162,8 @@ export default function Home() {
             </div>
 
             {/* Search row — RTL order: input (right) → חפש → 📍 (left) */}
-            <div className="flex gap-2">
-              <div className="flex flex-1 items-center gap-1 bg-white rounded-xl px-3 border-2 border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all shadow-sm" style={{ minHeight: "44px" }}>
+            <div className="flex gap-2 overflow-hidden">
+              <div className="flex flex-1 min-w-0 items-center gap-1 bg-white rounded-xl px-3 border-2 border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all shadow-sm" style={{ minHeight: "44px" }}>
                 <input
                   ref={inputRef}
                   type="text"
@@ -171,10 +171,10 @@ export default function Home() {
                   onChange={(e) => setAddress(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && searchAddress()}
                   placeholder="הכנס כתובת..."
-                  className="flex-1 bg-transparent focus:outline-none text-gray-700 placeholder-gray-400"
+                  className="flex-1 min-w-0 bg-transparent focus:outline-none text-gray-700 placeholder-gray-400"
                   style={{ fontSize: "16px" }}
                 />
-                <span className="text-gray-400 text-sm">🔍</span>
+                <span className="text-gray-400 text-sm shrink-0">🔍</span>
               </div>
               <button
                 onClick={searchAddress}
@@ -188,7 +188,7 @@ export default function Home() {
                 onClick={useMyLocation}
                 disabled={geoLoading}
                 title="מיקום נוכחי"
-                className="shrink-0 bg-white border-2 border-gray-300 rounded-xl px-3 text-xl hover:bg-blue-50 disabled:opacity-50 transition-colors shadow-sm"
+                className="shrink-0 bg-white border-2 border-gray-300 rounded-xl w-11 flex items-center justify-center text-xl hover:bg-blue-50 disabled:opacity-50 transition-colors shadow-sm"
                 style={{ minHeight: "44px" }}
               >
                 {geoLoading ? "⏳" : "📍"}
