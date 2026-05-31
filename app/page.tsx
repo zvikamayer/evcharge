@@ -161,25 +161,8 @@ export default function Home() {
               })}
             </div>
 
-            {/* Search row — RTL order: 📍 (right) → חפש → input (left) */}
+            {/* Search row — RTL order: input (right) → חפש → 📍 (left) */}
             <div className="flex gap-2">
-              <button
-                onClick={useMyLocation}
-                disabled={geoLoading}
-                title="מיקום נוכחי"
-                className="bg-white border-2 border-gray-300 rounded-xl px-3 text-xl hover:bg-blue-50 disabled:opacity-50 transition-colors shadow-sm"
-                style={{ minHeight: "44px" }}
-              >
-                {geoLoading ? "⏳" : "📍"}
-              </button>
-              <button
-                onClick={searchAddress}
-                disabled={geoLoading}
-                className="bg-blue-600 text-white px-4 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
-                style={{ minHeight: "44px" }}
-              >
-                {geoLoading ? "..." : "חפש"}
-              </button>
               <div className="flex flex-1 items-center gap-1 bg-white rounded-xl px-3 border-2 border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all shadow-sm" style={{ minHeight: "44px" }}>
                 <input
                   ref={inputRef}
@@ -193,6 +176,23 @@ export default function Home() {
                 />
                 <span className="text-gray-400 text-sm">🔍</span>
               </div>
+              <button
+                onClick={searchAddress}
+                disabled={geoLoading}
+                className="bg-blue-600 text-white px-4 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
+                style={{ minHeight: "44px" }}
+              >
+                {geoLoading ? "..." : "חפש"}
+              </button>
+              <button
+                onClick={useMyLocation}
+                disabled={geoLoading}
+                title="מיקום נוכחי"
+                className="bg-white border-2 border-gray-300 rounded-xl px-3 text-xl hover:bg-blue-50 disabled:opacity-50 transition-colors shadow-sm"
+                style={{ minHeight: "44px" }}
+              >
+                {geoLoading ? "⏳" : "📍"}
+              </button>
             </div>
 
             {/* Radius slider */}
