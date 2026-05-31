@@ -240,16 +240,6 @@ export default function Home() {
           }}
         />
 
-        {/* Floating GPS button — always visible, z-[2000] so it floats above the table */}
-        <button
-          onClick={useMyLocation}
-          disabled={geoLoading}
-          title="מיקום נוכחי"
-          className="absolute bottom-16 right-4 z-[2000] w-11 h-11 rounded-full bg-blue-600 shadow-lg border-2 border-white flex items-center justify-center text-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          {geoLoading ? "⏳" : "📍"}
-        </button>
-
         {/* Info button */}
         <button
           onClick={() => setShowInfo(true)}
