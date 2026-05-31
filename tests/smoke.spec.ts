@@ -9,6 +9,13 @@ import { test, expect } from "@playwright/test";
 const SEARCH_CITY = "כפר סבא";
 const BOUNDS = "minLat=32.05&maxLat=32.35&minLng=34.75&maxLng=35.05";
 
+/** Dismiss the welcome bubble by setting localStorage before the page loads. */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("vcharge_welcomed", "1");
+  });
+});
+
 /** Wait for the loading spinner to appear then disappear. */
 async function waitForLoad(page: import("@playwright/test").Page) {
   // Spinner should appear quickly
