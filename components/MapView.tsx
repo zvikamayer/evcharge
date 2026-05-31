@@ -267,14 +267,16 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     visible.forEach((pin) => {
       const [lat, lng] = pin.geo.split(",").map(Number);
       const color = pinColor(pin.av);
+      // Occupied/unknown markers get a higher z-index so they render above green dots
+      const isOccupied = pin.av.ava === 0;
       const icon = L.current.divIcon({
         className: "",
-        html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
+        html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
       });
 
-      const marker = L.current.marker([lat, lng], { icon }).addTo(map.current);
+      const marker = L.current.marker([lat, lng], { icon, zIndexOffset: isOccupied ? 500 : 0 }).addTo(map.current);
       const key = `${pin.source ?? "ev"}-${pin.id}`;
       markerMap.current[key] = { marker, pin };
 
@@ -337,9 +339,41 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       setEmptySearch(true);
     }
 
-    // Phase 2: rows that need an API call (EV-Edge, GreenSpot) — closest 40
-    const apiItems = withDist
-      .filter(({ pin }) => !pin.inlineData && (filterRef.current !== "available" || pin.av.ava > 0))
+    // Phase 2a: colour-sync ALL non-inline markers with real availability data.
+    // EV-Edge / GreenSpot pins carry stale availability in the pins response —
+    // fetch the detail for EVERY pin so every marker shows the correct colour.
+    // fetchLocation() caches results so Phase 2b reuses them for free.
+    const nonInlinePins = withDist.filter(({ pin }) => !pin.inlineData);
+    nonInlinePins.forEach(async ({ pin }) => {
+      try {
+        const detail = await fetchLocation(pin.id, pin.source);
+        const loc = detail.locations[0];
+        if (!loc) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const evses = loc.zones.flatMap((z: any) => z.evses);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const available = evses.filter((e: any) => e.isAvailable).length;
+        const markerKey = `${pin.source ?? "ev"}-${pin.id}`;
+        const markerEntry = markerMap.current[markerKey];
+        if (markerEntry && L.current) {
+          const actualColor = available > 0 ? "#22c55e" : "#ef4444";
+          markerEntry.marker.setZIndexOffset(available > 0 ? 0 : 500);
+          markerEntry.marker.setIcon(
+            L.current.divIcon({
+              className: "",
+              html: `<div style="width:20px;height:20px;border-radius:50%;background:${actualColor};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer"></div>`,
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+            })
+          );
+        }
+      } catch {/* ignore */}
+    });
+
+    // Phase 2b: build table rows for the closest 40 non-inline stations.
+    // fetchLocation() hits the in-memory cache populated by Phase 2a above.
+    const apiItems = nonInlinePins
+      .filter(({ pin }) => filterRef.current !== "available" || pin.av.ava > 0)
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 40);
 
@@ -362,22 +396,6 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
           const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
           const chargeType: "ac" | "dc" | "mixed" | undefined =
             types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : undefined;
-
-          // Sync map marker colour with the real availability from detail API
-          // (pins API can be stale — e.g. shows green but station is actually full)
-          const markerKey = `${pin.source ?? "ev"}-${pin.id}`;
-          const markerEntry = markerMap.current[markerKey];
-          if (markerEntry && L.current) {
-            const actualColor = available > 0 ? "#22c55e" : "#ef4444";
-            markerEntry.marker.setIcon(
-              L.current.divIcon({
-                className: "",
-                html: `<div style="width:16px;height:16px;border-radius:50%;background:${actualColor};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer"></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8],
-              })
-            );
-          }
 
           return {
             id: pin.id,
@@ -493,14 +511,14 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     if (el) {
       const dot = el.querySelector("div");
       if (dot) {
-        dot.style.width = "24px";
-        dot.style.height = "24px";
+        dot.style.width = "28px";
+        dot.style.height = "28px";
         dot.style.border = "3px solid #1d4ed8";
         dot.style.marginLeft = "-4px";
         dot.style.marginTop = "-4px";
         setTimeout(() => {
-          dot.style.width = "16px";
-          dot.style.height = "16px";
+          dot.style.width = "20px";
+          dot.style.height = "20px";
           dot.style.border = "2px solid #fff";
           dot.style.marginLeft = "";
           dot.style.marginTop = "";
