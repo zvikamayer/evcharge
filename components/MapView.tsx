@@ -78,6 +78,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
   const [loading, setLoading] = useState(false);
   const [tableRows, setTableRows] = useState<StationRow[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
+  const [emptySearch, setEmptySearch] = useState(false);
 
   const filterRef = useRef(filter);
   useEffect(() => { filterRef.current = filter; }, [filter]);
@@ -98,6 +99,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     // Show loading indicator immediately — pin fetching can be slow on mobile
     setTableLoading(true);
     setTableRows([]);
+    setEmptySearch(false);
 
     // Draw circle first so we can fitBounds on it
     if (circle.current) circle.current.remove();
@@ -302,6 +304,11 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     // Show CelloCharge rows immediately — dismiss spinner
     setTableRows(inlineRows);
     setTableLoading(false);
+
+    // If no pins at all found — show empty state
+    if (inRadius.length === 0) {
+      setEmptySearch(true);
+    }
 
     // Phase 2: rows that need an API call (EV-Edge, GreenSpot) — closest 40
     const apiItems = withDist
@@ -525,6 +532,17 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       )}
       {!tableLoading && tableRows.length > 0 && (
         <CheapTable stations={tableRows} onSelect={(id, source) => handleTableSelect(id, source)} />
+      )}
+      {!tableLoading && emptySearch && (
+        <div className="absolute bottom-16 left-2 right-2 md:left-4 md:right-auto md:w-80 z-[1000] bg-white rounded-2xl shadow-xl border border-gray-100 px-4 py-4">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">🔍</div>
+            <div>
+              <div className="text-sm font-semibold text-gray-700">לא נמצאו עמדות בקרבתך</div>
+              <div className="text-xs text-gray-400 mt-1">נסה להגדיל את הרדיוס או לחפש כתובת קרובה יותר לאזור עירוני</div>
+            </div>
+          </div>
+        </div>
       )}
       {loading && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg px-4 py-2 text-sm font-medium z-[1000]">
