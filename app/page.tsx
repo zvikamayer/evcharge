@@ -219,8 +219,7 @@ export default function Home() {
         {/* Legend — compact, always visible */}
         <div className="flex gap-3 px-3 py-1.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 overflow-x-auto scrollbar-hide">
           <span className="flex items-center gap-1 shrink-0"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />פנויה</span>
-          <span className="flex items-center gap-1 shrink-0"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />לא ידוע</span>
-          <span className="flex items-center gap-1 shrink-0"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />תפוסה</span>
+          <span className="flex items-center gap-1 shrink-0"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />תפוסה</span>
           <span className="flex items-center gap-1 shrink-0 text-amber-500">★ הזולה ביותר</span>
         </div>
       </header>
