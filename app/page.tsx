@@ -23,7 +23,19 @@ export default function Home() {
   const [showInfo, setShowInfo] = useState(false);
   const [infoTab, setInfoTab] = useState<"contact" | "about">("contact");
   const [headerExpanded, setHeaderExpanded] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!localStorage.getItem("vcharge_welcomed")) {
+      setShowWelcome(true);
+    }
+  }, []);
+
+  const dismissWelcome = () => {
+    localStorage.setItem("vcharge_welcomed", "1");
+    setShowWelcome(false);
+  };
 
   useEffect(() => {
     fetch("/api/cello/providers")
@@ -33,7 +45,10 @@ export default function Home() {
   }, []);
 
   const useMyLocation = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setError("הדפדפן שלך לא תומך בשירותי מיקום");
+      return;
+    }
     setGeoLoading(true);
     setError("");
     navigator.geolocation.getCurrentPosition(
@@ -43,9 +58,18 @@ export default function Home() {
         setGeoLoading(false);
         setHeaderExpanded(false);
       },
-      () => {
-        setError("לא ניתן לקבל מיקום");
+      (err) => {
+        let msg = "לא ניתן לקבל מיקום — נסה שוב";
+        if (err.code === 1) msg = "הרשאת מיקום נדחתה — אפשר מיקום בהגדרות הדפדפן";
+        else if (err.code === 2) msg = "לא ניתן לאתר מיקום — נסה בחוץ או עם WiFi";
+        else if (err.code === 3) msg = "פג זמן הבקשה — נסה שוב";
+        setError(msg);
         setGeoLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,      // 10 שניות — מונע תקיעה על אנדרואיד
+        maximumAge: 30000,   // מיקום שמור עד 30 שניות מקביל
       }
     );
   };
@@ -281,6 +305,67 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Welcome bubble — shown only on first visit */}
+      {showWelcome && (
+        <div
+          className="fixed inset-0 z-[3000] flex items-end sm:items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }}
+          onClick={dismissWelcome}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-l from-blue-700 to-blue-500 px-6 pt-6 pb-5 text-white">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="bg-white/20 rounded-xl p-2 text-xl leading-none">⚡</div>
+                <h2 className="text-lg font-bold tracking-tight">ברוכים הבאים ל-vcharge</h2>
+              </div>
+              <p className="text-sm text-blue-100 leading-relaxed mt-2">
+                מראה לך בזמן אמת אילו עמדות טעינה <span className="font-semibold text-white">פנויות עכשיו</span> בקרבתך — וכמה הן עולות.
+              </p>
+            </div>
+
+            {/* Steps */}
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-blue-50 flex items-center justify-center text-lg shrink-0">📍</div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">הכנס כתובת או לחץ על המיקום שלך</p>
+                  <p className="text-xs text-gray-400 mt-0.5">לחץ על הכפתור 📍 לאיתור אוטומטי</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-50 flex items-center justify-center text-lg shrink-0">🗺</div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">ראה עמדות פנויות על המפה</p>
+                  <p className="text-xs text-gray-400 mt-0.5">ירוק = פנויה &nbsp;·&nbsp; כתום = לא ידוע &nbsp;·&nbsp; אדום = תפוסה</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-amber-50 flex items-center justify-center text-lg shrink-0">💰</div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">השווה מחירים בין כל הספקים</p>
+                  <p className="text-xs text-gray-400 mt-0.5">הטבלה ממיינת אוטומטית לפי מחיר ומרחק</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Button */}
+            <div className="px-6 pb-6">
+              <button
+                onClick={dismissWelcome}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-2xl text-base transition-colors shadow-md shadow-blue-200"
+              >
+                בואו נמצא עמדה! ⚡
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,6 +7,14 @@ const GA_ID = "G-V89H3K3Y4G";
 export const metadata: Metadata = {
   title: "vcharge — עמדות טעינה לרכב חשמלי",
   description: "מצא עמדות טעינה פנויות וזולות לרכב חשמלי בקרבתך — בדוק זמינות ומחירים בזמן אמת",
+  icons: {
+    icon: "/icon.svg",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "vcharge",
+  },
 };
 
 export const viewport: Viewport = {
@@ -23,6 +31,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="overscroll-none">
         {children}
         <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+        <Script id="sw-register" strategy="afterInteractive">{`
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+          }
+        `}</Script>
         <Script id="ga-init" strategy="afterInteractive">{`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
