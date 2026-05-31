@@ -227,7 +227,17 @@ export default function Home() {
 
       {/* Map */}
       <main className="flex-1 relative overflow-hidden">
-        <MapView filter={filter} provider={provider} center={center} radiusKm={radiusKm} onPinCounts={setPinCounts} />
+        <MapView
+          filter={filter}
+          provider={provider}
+          center={center}
+          radiusKm={radiusKm}
+          onPinCounts={setPinCounts}
+          onCenterChange={(newCenter) => {
+            setCenter(newCenter);
+            setAddress("מיקום מותאם");
+          }}
+        />
 
         {/* Info button */}
         <button

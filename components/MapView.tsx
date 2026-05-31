@@ -58,9 +58,10 @@ interface Props {
   center: { lat: number; lng: number } | null;
   radiusKm: number;
   onPinCounts?: (counts: Record<string, number>) => void;
+  onCenterChange?: (center: { lat: number; lng: number }) => void;
 }
 
-export default function MapView({ filter, provider, center, radiusKm, onPinCounts }: Props) {
+export default function MapView({ filter, provider, center, radiusKm, onPinCounts, onCenterChange }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapReady = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,6 +90,9 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
   const onPinCountsRef = useRef(onPinCounts);
   useEffect(() => { onPinCountsRef.current = onPinCounts; }, [onPinCounts]);
 
+  const onCenterChangeRef = useRef(onCenterChange);
+  useEffect(() => { onCenterChangeRef.current = onCenterChange; }, [onCenterChange]);
+
   // Called once map is ready and whenever center/radius/filter change
   const refresh = useCallback(async (
     c: { lat: number; lng: number },
@@ -114,13 +118,13 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     // Zoom + pan to fit the radius circle
     map.current.fitBounds(circle.current.getBounds(), { padding: [24, 24], animate: true });
 
-    // Center / "you are here" pin
+    // Center / "you are here" pin — draggable
     if (centerMarker.current) centerMarker.current.remove();
     centerMarker.current = L.current.marker([c.lat, c.lng], {
       icon: L.current.divIcon({
         className: "",
         html: `
-          <div style="position:relative;width:32px;height:40px">
+          <div style="position:relative;width:32px;height:40px;cursor:grab">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40">
               <path d="M16 0C9.37 0 4 5.37 4 12c0 9 12 28 12 28S28 21 28 12C28 5.37 22.63 0 16 0z"
                 fill="#1d4ed8" stroke="#fff" stroke-width="1.5"/>
@@ -130,8 +134,30 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
         iconSize: [32, 40],
         iconAnchor: [16, 40],
       }),
+      draggable: true,
       zIndexOffset: 1000,
     }).addTo(map.current);
+
+    // Move circle in real-time while dragging
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    centerMarker.current.on("drag", (e: any) => {
+      const { lat, lng } = e.target.getLatLng();
+      circle.current?.setLatLng([lat, lng]);
+    });
+
+    // On drop — refresh stations at new location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    centerMarker.current.on("dragend", (e: any) => {
+      const { lat, lng } = e.target.getLatLng();
+      const newCenter = { lat, lng };
+      refresh(newCenter, radiusRef.current);
+      onCenterChangeRef.current?.(newCenter);
+    });
+
+    centerMarker.current.bindTooltip("גרור לשינוי מיקום", {
+      direction: "top",
+      offset: [0, -44],
+    });
 
     // Fetch pins from all providers in parallel (all via server-side proxies to avoid CORS)
     const bb = boundingBox(c.lat, c.lng, r);
