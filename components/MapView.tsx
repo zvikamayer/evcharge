@@ -521,9 +521,10 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       const Lref = (window as any).L;
       L.current = Lref;
       const m = Lref.map(mapRef.current).setView([31.76, 34.72], 9);
-      Lref.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
+      Lref.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20,
       }).addTo(m);
       map.current = m;
       mapReady.current = true;
