@@ -13,9 +13,11 @@ function pinColor(av: Pin["av"]) {
 
 const EV_BASE = "https://cp.evedge.co.il/api/v1/app";
 const LS_PREFIX = "vcharge_loc_";
-const LS_TTL_MS = 5 * 60 * 1000; // 5 min localStorage TTL for EV-Edge details
+const LS_TTL_MS  = 3 * 60 * 1000; // 3 min localStorage TTL for EV-Edge details
+const MEM_TTL_MS = 2 * 60 * 1000; // 2 min in-memory TTL (shorter — ensures fresh colours)
 
-const cache: Record<string, LocationDetail> = {};
+// In-memory cache with timestamps so stale availability data doesn't persist
+const cache: Record<string, { data: LocationDetail; ts: number }> = {};
 
 function lsGet(key: string): LocationDetail | null {
   try {
@@ -32,11 +34,13 @@ function lsSet(key: string, data: LocationDetail) {
 
 async function fetchLocation(id: number | string, source?: "greenspot" | "cellocharge"): Promise<LocationDetail> {
   const key = source === "greenspot" ? `gs-${id}` : source === "cellocharge" ? `cello-${id}` : `ev-${id}`;
-  if (cache[key]) return cache[key];
-  // Check localStorage cache for EV-Edge (browser-side, 5 min TTL)
+  // Return in-memory cached value only if still fresh
+  const cached = cache[key];
+  if (cached && Date.now() - cached.ts < MEM_TTL_MS) return cached.data;
+  // Check localStorage cache for EV-Edge (browser-side, 3 min TTL)
   if (!source) {
     const ls = lsGet(key);
-    if (ls) { cache[key] = ls; return ls; }
+    if (ls) { cache[key] = { data: ls, ts: Date.now() }; return ls; }
   }
   // EV-Edge is fetched client-side (has CORS headers); GreenSpot & CelloCharge via server proxy
   const url = source === "greenspot"
@@ -47,7 +51,7 @@ async function fetchLocation(id: number | string, source?: "greenspot" | "celloc
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data: LocationDetail = await res.json();
-  cache[key] = data;
+  cache[key] = { data, ts: Date.now() };
   if (!source) lsSet(key, data); // persist EV-Edge details
   return data;
 }
@@ -263,9 +267,11 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     Object.values(markerMap.current).forEach(({ marker }) => marker.remove());
     markerMap.current = {};
 
-    // Add new markers
+    // Add new markers — defensive try/catch so one bad pin doesn't stop the rest
     visible.forEach((pin) => {
+      try {
       const [lat, lng] = pin.geo.split(",").map(Number);
+      if (isNaN(lat) || isNaN(lng)) return; // skip pins with invalid coordinates
       const color = pinColor(pin.av);
       // Occupied/unknown markers get a higher z-index so they render above green dots
       const isOccupied = pin.av.ava === 0;
@@ -294,6 +300,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
           setLoading(false);
         }
       });
+      } catch {/* skip pins that fail to render */}
     });
 
     // ── Build price table ────────────────────────────────────────────────────
