@@ -206,9 +206,9 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       onPinCountsRef.current(counts);
     }
 
-    const visible = inRadius.filter((p) =>
-      filterRef.current === "available" ? p.av.ava > 0 : true
-    );
+    // Always show all pins on map — colour conveys availability (green/amber/red)
+    // The "available only" filter applies to the table, not to map markers
+    const visible = inRadius;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async function openPopupForMarker(marker: any, pin: Pin) {
@@ -306,8 +306,9 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     });
 
     // Phase 1: rows with inline data (no API call needed)
+    // Apply availability filter to table rows (not to map markers)
     const inlineRows: StationRow[] = withDist
-      .filter(({ pin }) => pin.inlineData)
+      .filter(({ pin }) => pin.inlineData && (filterRef.current !== "available" || pin.av.ava > 0))
       .map(({ pin, dist }) => {
         const [pinLat, pinLng] = pin.geo.split(",").map(Number);
         const d = pin.inlineData!;
@@ -338,7 +339,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
 
     // Phase 2: rows that need an API call (EV-Edge, GreenSpot) — closest 40
     const apiItems = withDist
-      .filter(({ pin }) => !pin.inlineData)
+      .filter(({ pin }) => !pin.inlineData && (filterRef.current !== "available" || pin.av.ava > 0))
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 40);
 
