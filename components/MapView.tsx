@@ -672,7 +672,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
             <div className="text-2xl">🔍</div>
             <div>
               <div className="text-sm font-semibold text-gray-700">לא נמצאו עמדות בקרבתך</div>
-              <div className="text-xs text-gray-400 mt-1">נסה להגדיל את הרדיוס או לחפש כתובת קרובה יותר לאזור עירוני</div>
+              <div className="text-xs text-gray-400 mt-1">הגדל את הרדיוס או גרור את הסיכה למקום אחר</div>
             </div>
           </div>
         </div>
