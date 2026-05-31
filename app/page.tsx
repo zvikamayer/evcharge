@@ -350,8 +350,8 @@ export default function Home() {
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-emerald-50 flex items-center justify-center text-lg shrink-0">🗺</div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">ראה עמדות פנויות על המפה</p>
-                  <p className="text-xs text-gray-400 mt-0.5">ירוק = פנויה &nbsp;·&nbsp; כתום = לא ידוע &nbsp;·&nbsp; אדום = תפוסה</p>
+                  <p className="text-sm font-semibold text-gray-800">ראה עמדות על המפה בזמן אמת</p>
+                  <p className="text-xs text-gray-400 mt-0.5">🟢 פנויה &nbsp;·&nbsp; 🔴 תפוסה &nbsp;·&nbsp; ★ הזולה ביותר</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">

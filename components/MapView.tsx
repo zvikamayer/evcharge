@@ -84,6 +84,56 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
   const [tableLoading, setTableLoading] = useState(false);
   const [emptySearch, setEmptySearch] = useState(false);
 
+  // Track which marker currently shows the ★ star (cheapest station)
+  const cheapestKeyRef = useRef<string | null>(null);
+
+  // Whenever table rows change, move the ★ to the cheapest station on the map
+  useEffect(() => {
+    if (!L.current) return;
+    const withPrice = tableRows.filter((r) => r.pricePerKwh != null && r.pricePerKwh > 0);
+
+    // Helper — restore a marker to its plain colour
+    const restore = (key: string) => {
+      const e = markerMap.current[key];
+      if (!e || !L.current) return;
+      const color = e.pin.av.ava > 0 ? "#22c55e" : "#ef4444";
+      e.marker.setZIndexOffset(e.pin.av.ava > 0 ? 0 : 500);
+      e.marker.setIcon(L.current.divIcon({
+        className: "",
+        html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      }));
+    };
+
+    if (withPrice.length === 0) {
+      if (cheapestKeyRef.current) { restore(cheapestKeyRef.current); cheapestKeyRef.current = null; }
+      return;
+    }
+
+    const minPrice = Math.min(...withPrice.map((r) => r.pricePerKwh!));
+    const cheapest = withPrice.find((r) => r.pricePerKwh === minPrice);
+    if (!cheapest) return;
+    const newKey = `${cheapest.source ?? "ev"}-${cheapest.id}`;
+    if (newKey === cheapestKeyRef.current) return; // already starred
+
+    // Un-star the previous cheapest
+    if (cheapestKeyRef.current) restore(cheapestKeyRef.current);
+
+    // Star the new cheapest
+    const entry = markerMap.current[newKey];
+    if (entry && L.current) {
+      entry.marker.setZIndexOffset(1000);
+      entry.marker.setIcon(L.current.divIcon({
+        className: "",
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:#22c55e;border:2.5px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="color:#fff;font-size:14px;line-height:1;font-weight:700">★</span></div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      }));
+    }
+    cheapestKeyRef.current = newKey;
+  }, [tableRows]);
+
   const filterRef = useRef(filter);
   useEffect(() => { filterRef.current = filter; }, [filter]);
 
@@ -273,9 +323,10 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       `, { closeButton: true, offset: [0, -8] }).openPopup();
     }
 
-    // Clear old markers
+    // Clear old markers and reset cheapest-star tracking
     Object.values(markerMap.current).forEach(({ marker }) => marker.remove());
     markerMap.current = {};
+    cheapestKeyRef.current = null;
 
     // Add new markers — defensive try/catch so one bad pin doesn't stop the rest
     visible.forEach((pin) => {
