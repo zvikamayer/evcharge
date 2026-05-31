@@ -240,12 +240,12 @@ export default function Home() {
           }}
         />
 
-        {/* Floating GPS button — always visible on map */}
+        {/* Floating GPS button — always visible, z-[2000] so it floats above the table */}
         <button
           onClick={useMyLocation}
           disabled={geoLoading}
           title="מיקום נוכחי"
-          className="absolute bottom-16 right-4 z-[1000] w-11 h-11 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-xl hover:bg-blue-50 disabled:opacity-50 transition-colors"
+          className="absolute bottom-16 right-4 z-[2000] w-11 h-11 rounded-full bg-blue-600 shadow-lg border-2 border-white flex items-center justify-center text-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {geoLoading ? "⏳" : "📍"}
         </button>
@@ -253,7 +253,7 @@ export default function Home() {
         {/* Info button */}
         <button
           onClick={() => setShowInfo(true)}
-          className="absolute bottom-4 right-4 z-[1000] w-9 h-9 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-blue-600 font-bold text-base hover:bg-blue-50 transition-colors"
+          className="absolute bottom-4 right-4 z-[2000] w-9 h-9 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center text-blue-600 font-bold text-base hover:bg-blue-50 transition-colors"
           title="מידע ויצירת קשר"
         >
           i
