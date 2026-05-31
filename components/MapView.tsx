@@ -6,9 +6,8 @@ import StationCard from "./StationCard";
 import CheapTable, { StationRow } from "./CheapTable";
 
 function pinColor(av: Pin["av"]) {
-  if (av.ava > 0) return "#22c55e";
-  if (av.unk > 0) return "#f59e0b";
-  return "#ef4444";
+  if (av.ava > 0) return "#22c55e"; // green  — at least one charger free
+  return "#ef4444";                  // red    — nothing available (occupied or unknown)
 }
 
 const EV_BASE = "https://cp.evedge.co.il/api/v1/app";
@@ -223,6 +222,17 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       const evses = loc.zones.flatMap((z: any) => z.evses);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const available = evses.filter((e: any) => e.isAvailable).length;
+      // Immediately correct the marker colour with real availability data
+      if (L.current) {
+        const actualColor = available > 0 ? "#22c55e" : "#ef4444";
+        marker.setZIndexOffset(available > 0 ? 0 : 500);
+        marker.setIcon(L.current.divIcon({
+          className: "",
+          html: `<div style="width:20px;height:20px;border-radius:50%;background:${actualColor};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+        }));
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const prices = evses.map((e: any) => tariffMap[e.tariffId]?.priceForEnergy).filter((p: any): p is number => p != null && p > 0);
       const minPrice = prices.length ? Math.min(...prices) : null;
@@ -349,8 +359,11 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     // Phase 2a: colour-sync ALL non-inline markers with real availability data.
     // EV-Edge / GreenSpot pins carry stale availability in the pins response —
     // fetch the detail for EVERY pin so every marker shows the correct colour.
-    // fetchLocation() caches results so Phase 2b reuses them for free.
-    const nonInlinePins = withDist.filter(({ pin }) => !pin.inlineData);
+    // Sort by distance so nearby stations update first; fetchLocation() caches
+    // results so Phase 2b reuses them for free.
+    const nonInlinePins = withDist
+      .filter(({ pin }) => !pin.inlineData)
+      .sort((a, b) => a.dist - b.dist);
     nonInlinePins.forEach(async ({ pin }) => {
       try {
         const detail = await fetchLocation(pin.id, pin.source);
