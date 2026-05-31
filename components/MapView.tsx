@@ -362,6 +362,23 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
           const types = new Set(evses.map((e: any) => e.currentType).filter(Boolean));
           const chargeType: "ac" | "dc" | "mixed" | undefined =
             types.has("dc") && types.has("ac") ? "mixed" : types.has("dc") ? "dc" : types.has("ac") ? "ac" : undefined;
+
+          // Sync map marker colour with the real availability from detail API
+          // (pins API can be stale — e.g. shows green but station is actually full)
+          const markerKey = `${pin.source ?? "ev"}-${pin.id}`;
+          const markerEntry = markerMap.current[markerKey];
+          if (markerEntry && L.current) {
+            const actualColor = available > 0 ? "#22c55e" : "#ef4444";
+            markerEntry.marker.setIcon(
+              L.current.divIcon({
+                className: "",
+                html: `<div style="width:16px;height:16px;border-radius:50%;background:${actualColor};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer"></div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+              })
+            );
+          }
+
           return {
             id: pin.id,
             source: pin.source,
