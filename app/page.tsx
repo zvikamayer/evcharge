@@ -10,6 +10,7 @@ const STATIC_PROVIDERS = [
   { id: "greenspot", label: "GreenSpot" },
   { id: "afcon", label: "ON-EV" },
   { id: "sonolevi", label: "SonolEvi" },
+  { id: "scala", label: "Scala" },
 ];
 
 export default function Home() {
