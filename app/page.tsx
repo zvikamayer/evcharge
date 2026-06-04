@@ -8,6 +8,7 @@ const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 const STATIC_PROVIDERS = [
   { id: "evedge", label: "EV-Edge" },
   { id: "greenspot", label: "GreenSpot" },
+  { id: "afcon", label: "ON-EV" },
 ];
 
 export default function Home() {
