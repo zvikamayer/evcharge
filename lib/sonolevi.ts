@@ -1,38 +1,55 @@
 import type { Pin } from "./api";
 import { getEvmapPins } from "./evmap-provider";
-import { fetchAllCelloLocations } from "./cellocharge";
 
 const BASE = "https://account.sonolevi.co.il";
+const HEADERS = {
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "X-Requested-With": "XMLHttpRequest",
+  "Referer": `${BASE}/findCharger`,
+};
+const BATCH = 25; // safe below the ~30-item server limit
+const PRICE_TTL_MS = 10 * 60_000; // prices change rarely — 10 min cache
 
-// Cache for the CelloCharge price lookup table (built once per cache cycle)
-let priceMapCache: Map<string, number | null> | null = null;
-let priceMapTs = 0;
-const PRICE_CACHE_TTL_MS = 5 * 60_000; // 5 min — prices change rarely
+let priceCache: Map<string, number | null> | null = null;
+let priceCacheTs = 0;
 
-/**
- * Builds a coordinate-keyed price lookup from CelloCharge SonolEvi locations.
- * Key = "lat,lng" rounded to 4 decimal places (~11m precision).
- */
-async function buildPriceMap(): Promise<Map<string, number | null>> {
+/** Fetch per-station kWh prices via batched findSiteListDataBySiteIds calls. */
+async function fetchPriceMap(siteIds: string[]): Promise<Map<string, number | null>> {
   const now = Date.now();
-  if (priceMapCache && now - priceMapTs < PRICE_CACHE_TTL_MS) return priceMapCache;
+  if (priceCache && now - priceCacheTs < PRICE_TTL_MS) return priceCache;
 
-  const allLocs = await fetchAllCelloLocations();
-  const priceMap = new Map<string, number | null>();
-
-  for (const loc of allLocs) {
-    if (loc.providerId !== "SonolEvi") continue;
-    const key = `${loc.coordinates.lat.toFixed(4)},${loc.coordinates.lng.toFixed(4)}`;
-    const price =
-      loc.tariffsSummary.maxPerKwh != null && loc.tariffsSummary.maxPerKwh > 0
-        ? loc.tariffsSummary.maxPerKwh
-        : null;
-    priceMap.set(key, price);
+  // Split into batches of BATCH, run all in parallel
+  const batches: string[][] = [];
+  for (let i = 0; i < siteIds.length; i += BATCH) {
+    batches.push(siteIds.slice(i, i + BATCH));
   }
 
-  priceMapCache = priceMap;
-  priceMapTs = now;
-  return priceMap;
+  const results = await Promise.allSettled(
+    batches.map((batch) =>
+      fetch(`${BASE}/stationFacade/findSiteListDataBySiteIds`, {
+        method: "POST",
+        headers: HEADERS,
+        body: JSON.stringify({ filterBySiteIds: batch.map(Number) }),
+        cache: "no-store",
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+    ),
+  );
+
+  const map = new Map<string, number | null>();
+  for (const r of results) {
+    if (r.status !== "fulfilled" || !r.value?.data) continue;
+    for (const site of r.value.data as { siteId: number; smstdlst?: { kp?: number }[] }[]) {
+      const kp = site.smstdlst?.[0]?.kp;
+      map.set(String(site.siteId), kp && kp > 0 ? kp : null);
+    }
+  }
+
+  priceCache = map;
+  priceCacheTs = now;
+  return map;
 }
 
 export async function getSonolEviPins(
@@ -41,21 +58,26 @@ export async function getSonolEviPins(
   minLng: number,
   maxLng: number,
 ): Promise<Pin[]> {
-  const [pins, priceMap] = await Promise.all([
-    getEvmapPins(BASE, "sonolevi", "SonolEvi", minLat, maxLat, minLng, maxLng),
-    buildPriceMap(),
-  ]);
+  // Fetch availability pins and prices in parallel
+  const pinsPromise = getEvmapPins(BASE, "sonolevi", "SonolEvi", minLat, maxLat, minLng, maxLng);
 
-  // Enrich each pin with the matching CelloCharge price
-  return pins.map((pin) => {
-    const [lat, lng] = pin.geo.split(",").map(Number);
-    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const price = priceMap.get(key) ?? null;
-    return {
-      ...pin,
-      inlineData: pin.inlineData
-        ? { ...pin.inlineData, pricePerKwh: price }
-        : pin.inlineData,
-    };
-  });
+  // We need the full Israel siteId list to build the price map.
+  // Reuse the same evmap cache by fetching all-Israel bounds and extracting IDs.
+  // Since getEvmapPins already caches the full list, we call it with wide bounds
+  // and extract the IDs from the returned filtered subset isn't enough —
+  // we need ALL ids for the price map, not just the ones in the current viewport.
+  // So fetch the full list separately (it shares the evmap cache).
+  const allPinsPromise = getEvmapPins(BASE, "sonolevi", "SonolEvi", 29, 33, 34, 36);
+
+  const [pins, allPins] = await Promise.all([pinsPromise, allPinsPromise]);
+
+  const allSiteIds = allPins.map((p) => String(p.id));
+  const priceMap = await fetchPriceMap(allSiteIds);
+
+  return pins.map((pin) => ({
+    ...pin,
+    inlineData: pin.inlineData
+      ? { ...pin.inlineData, pricePerKwh: priceMap.get(String(pin.id)) ?? null }
+      : pin.inlineData,
+  }));
 }
