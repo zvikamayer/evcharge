@@ -225,7 +225,10 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
     }
 
     // Fetch pins from all providers in parallel (all via server-side proxies to avoid CORS)
-    const bb = boundingBox(c.lat, c.lng, r);
+    // National mode: fetch from all of Israel instead of a small radius box
+    const bb = nationalModeRef.current
+      ? { minLat: 29.5, maxLat: 33.5, minLng: 34.2, maxLng: 35.9 }
+      : boundingBox(c.lat, c.lng, r);
     const qs = `minLat=${bb.minLat}&maxLat=${bb.maxLat}&minLng=${bb.minLng}&maxLng=${bb.maxLng}`;
     const p = providerRef.current;
     const isStaticProvider = p === "all" || p === "evedge" || p === "greenspot" || p === "afcon" || p === "sonolevi" || p === "scala" || p === "zenev" || p === "energyone";
