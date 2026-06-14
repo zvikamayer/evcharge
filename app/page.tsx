@@ -11,6 +11,7 @@ const STATIC_PROVIDERS = [
   { id: "afcon", label: "ON-EV" },
   { id: "sonolevi", label: "SonolEvi" },
   { id: "scala", label: "Scala" },
+  { id: "zenev", label: "Zen Energy" },
 ];
 
 export default function Home() {

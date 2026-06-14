@@ -218,17 +218,18 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     const bb = boundingBox(c.lat, c.lng, r);
     const qs = `minLat=${bb.minLat}&maxLat=${bb.maxLat}&minLng=${bb.minLng}&maxLng=${bb.maxLng}`;
     const p = providerRef.current;
-    const isStaticProvider = p === "all" || p === "evedge" || p === "greenspot" || p === "afcon" || p === "sonolevi" || p === "scala";
+    const isStaticProvider = p === "all" || p === "evedge" || p === "greenspot" || p === "afcon" || p === "sonolevi" || p === "scala" || p === "zenev";
     // Any unknown provider id is treated as a CelloCharge providerId
     const wantEv = p === "all" || p === "evedge";
     const wantGs = p === "all" || p === "greenspot";
     const wantAfcon = p === "all" || p === "afcon";
     const wantSonol = p === "all" || p === "sonolevi";
     const wantScala = p === "all" || p === "scala";
+    const wantZen = p === "all" || p === "zenev";
     const wantCello = p === "all" || !isStaticProvider;
     const celloProviderParam = !isStaticProvider ? `&providerId=${encodeURIComponent(p)}` : "";
     // Fetch each provider independently so one failure doesn't block the others.
-    const [evPins, gsPins, celloPins, afconPins, sonolPins, scalaPins] = await Promise.all([
+    const [evPins, gsPins, celloPins, afconPins, sonolPins, scalaPins, zenPins] = await Promise.all([
       wantEv
         ? fetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`)
             .then((r) => r.json()).then((d: { pins?: Pin[] }) => d.pins ?? []).catch(() => [] as Pin[])
@@ -253,8 +254,12 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
         ? fetch(`/api/scala/pins?${qs}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
+      wantZen
+        ? fetch(`/api/zenev/pins?${qs}`)
+            .then((r) => r.json()).catch(() => [] as Pin[])
+        : ([] as Pin[]),
     ]);
-    const pins: Pin[] = [...evPins, ...gsPins, ...celloPins, ...afconPins, ...sonolPins, ...scalaPins];
+    const pins: Pin[] = [...evPins, ...gsPins, ...celloPins, ...afconPins, ...sonolPins, ...scalaPins, ...zenPins];
 
     const inRadius = pins.filter((p) => {
       const [lat, lng] = p.geo.split(",").map(Number);
@@ -269,6 +274,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       counts["afcon"] = inRadius.filter((p) => p.providerId === "afcon").length;
       counts["sonolevi"] = inRadius.filter((p) => p.providerId === "sonolevi").length;
       counts["scala"] = inRadius.filter((p) => p.providerId === "scala").length;
+      counts["zenev"] = inRadius.filter((p) => p.providerId === "zenev").length;
       for (const p of inRadius) {
         if (p.source === "cellocharge" && p.providerId) {
           counts[p.providerId] = (counts[p.providerId] ?? 0) + 1;
