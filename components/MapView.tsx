@@ -18,6 +18,13 @@ const MEM_TTL_MS = 2 * 60 * 1000; // 2 min in-memory TTL (shorter — ensures fr
 // In-memory cache with timestamps so stale availability data doesn't persist
 const cache: Record<string, { data: LocationDetail; ts: number }> = {};
 
+/** Fetch with an 8-second abort timeout so a hung provider API never stalls the whole page. */
+function timedFetch(url: string, ms = 8_000): Promise<Response> {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 function lsGet(key: string): LocationDetail | null {
   try {
     const raw = localStorage.getItem(LS_PREFIX + key);
@@ -247,35 +254,35 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
     // Fetch each provider independently so one failure doesn't block the others.
     const [evPins, gsPins, celloPins, afconPins, sonolPins, scalaPins, zenPins, energyOnePins] = await Promise.all([
       wantEv
-        ? fetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`)
+        ? timedFetch(`${EV_BASE}/pins?minLatitude=${bb.minLat}&maxLatitude=${bb.maxLat}&minLongitude=${bb.minLng}&maxLongitude=${bb.maxLng}`)
             .then((r) => r.json()).then((d: { pins?: Pin[] }) => d.pins ?? []).catch(() => [] as Pin[])
         : ([] as Pin[]),
       wantGs
-        ? fetch(`/api/gs/pins?${qs}`)
+        ? timedFetch(`/api/gs/pins?${qs}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
       wantCello
-        ? fetch(`/api/cello/pins?${qs}${celloProviderParam}`)
+        ? timedFetch(`/api/cello/pins?${qs}${celloProviderParam}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
       wantAfcon
-        ? fetch(`/api/afcon/pins?${qs}`)
+        ? timedFetch(`/api/afcon/pins?${qs}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
       wantSonol
-        ? fetch(`/api/sonolevi/pins?${qs}`)
+        ? timedFetch(`/api/sonolevi/pins?${qs}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
       wantScala
-        ? fetch(`/api/scala/pins?${qs}`)
+        ? timedFetch(`/api/scala/pins?${qs}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
       wantZen
-        ? fetch(`/api/zenev/pins?${qs}`)
+        ? timedFetch(`/api/zenev/pins?${qs}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
       wantEnergyOne
-        ? fetch(`/api/energyone/pins?${qs}`)
+        ? timedFetch(`/api/energyone/pins?${qs}`)
             .then((r) => r.json()).catch(() => [] as Pin[])
         : ([] as Pin[]),
     ]);
@@ -466,15 +473,17 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
       setEmptySearch(true);
     }
 
-    // Phase 2a: colour-sync ALL non-inline markers with real availability data.
+    // Phase 2a: colour-sync non-inline markers with real availability data.
     // EV-Edge / GreenSpot pins carry stale availability in the pins response —
-    // fetch the detail for EVERY pin so every marker shows the correct colour.
+    // fetch the detail for nearby stations so markers show the correct colour.
     // Sort by distance so nearby stations update first; fetchLocation() caches
     // results so Phase 2b reuses them for free.
+    // National mode: skip entirely — too many stations; colour from pin data is good enough.
     const nonInlinePins = withDist
       .filter(({ pin }) => !pin.inlineData)
       .sort((a, b) => a.dist - b.dist);
-    nonInlinePins.forEach(async ({ pin }) => {
+    const phase2aPins = national ? [] : nonInlinePins.slice(0, 50);
+    phase2aPins.forEach(async ({ pin }) => {
       try {
         const detail = await fetchLocation(pin.id, pin.source, pin.providerId);
         const loc = detail.locations[0];
@@ -500,12 +509,13 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
       } catch {/* ignore */}
     });
 
-    // Phase 2b: build table rows for the closest 40 non-inline stations.
+    // Phase 2b: build table rows for the closest non-inline stations.
     // fetchLocation() hits the in-memory cache populated by Phase 2a above.
+    // Cap lower in national mode so we don't fire hundreds of parallel detail calls.
     const apiItems = nonInlinePins
       .filter(({ pin }) => filterRef.current !== "available" || pin.av.ava > 0)
       .sort((a, b) => a.dist - b.dist)
-      .slice(0, 40);
+      .slice(0, national ? 20 : 40);
 
     if (apiItems.length > 0) {
       // Helper to build a single row via API
