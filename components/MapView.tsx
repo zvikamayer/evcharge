@@ -31,8 +31,8 @@ function lsSet(key: string, data: LocationDetail) {
   try { localStorage.setItem(LS_PREFIX + key, JSON.stringify({ ts: Date.now(), data })); } catch {}
 }
 
-async function fetchLocation(id: number | string, source?: "greenspot" | "cellocharge"): Promise<LocationDetail> {
-  const key = source === "greenspot" ? `gs-${id}` : source === "cellocharge" ? `cello-${id}` : `ev-${id}`;
+async function fetchLocation(id: number | string, source?: "greenspot" | "cellocharge", providerId?: string): Promise<LocationDetail> {
+  const key = source === "greenspot" ? `gs-${id}` : source === "cellocharge" && providerId === "scala" ? `scala-${id}` : source === "cellocharge" ? `cello-${id}` : `ev-${id}`;
   // Return in-memory cached value only if still fresh
   const cached = cache[key];
   if (cached && Date.now() - cached.ts < MEM_TTL_MS) return cached.data;
@@ -44,6 +44,8 @@ async function fetchLocation(id: number | string, source?: "greenspot" | "celloc
   // EV-Edge is fetched client-side (has CORS headers); GreenSpot & CelloCharge via server proxy
   const url = source === "greenspot"
     ? `/api/gs/station/${id}`
+    : source === "cellocharge" && providerId === "scala"
+    ? `/api/scala/station/${id}`
     : source === "cellocharge"
     ? `/api/cello/station/${id}`
     : `${EV_BASE}/locations/${id}`;
@@ -281,7 +283,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async function openPopupForMarker(marker: any, pin: Pin) {
-      const detail = await fetchLocation(pin.id, pin.source);
+      const detail = await fetchLocation(pin.id, pin.source, pin.providerId);
       const loc = detail.locations[0];
       const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -369,7 +371,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       marker.on("click", async () => {
         setLoading(true);
         try {
-          const detail = await fetchLocation(pin.id, pin.source);
+          const detail = await fetchLocation(pin.id, pin.source, pin.providerId);
           setSelected(detail);
         } catch {
           alert("שגיאה בטעינת פרטי התחנה");
@@ -410,7 +412,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
           total: d.total,
           lat: pinLat,
           lng: pinLng,
-          chargeType: undefined,
+          chargeType: d.chargeType,
         } as StationRow;
       });
 
@@ -433,7 +435,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       .sort((a, b) => a.dist - b.dist);
     nonInlinePins.forEach(async ({ pin }) => {
       try {
-        const detail = await fetchLocation(pin.id, pin.source);
+        const detail = await fetchLocation(pin.id, pin.source, pin.providerId);
         const loc = detail.locations[0];
         if (!loc) return;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -469,7 +471,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       const buildApiRow = async ({ pin, dist }: typeof apiItems[0]): Promise<StationRow | null> => {
         try {
           const [pinLat, pinLng] = pin.geo.split(",").map(Number);
-          const detail = await fetchLocation(pin.id, pin.source);
+          const detail = await fetchLocation(pin.id, pin.source, pin.providerId);
           const loc = detail.locations[0];
           if (!loc) return null;
           const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));
@@ -615,7 +617,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     }
     // Open popup after pan
     setTimeout(async () => {
-      const detail = await fetchLocation(pin.id, pin.source).catch(() => null);
+      const detail = await fetchLocation(pin.id, pin.source, pin.providerId).catch(() => null);
       if (!detail) return;
       const loc = detail.locations[0];
       const tariffMap = Object.fromEntries(detail.tariffs.map((t) => [t.id, t]));

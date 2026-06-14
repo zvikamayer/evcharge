@@ -13,6 +13,7 @@ export interface Pin {
     address: string;
     pricePerKwh: number | null;
     total: number;
+    chargeType?: "ac" | "dc" | "mixed";
   };
 }
 
