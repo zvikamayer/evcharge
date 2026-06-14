@@ -152,10 +152,12 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
   const onCenterChangeRef = useRef(onCenterChange);
   useEffect(() => { onCenterChangeRef.current = onCenterChange; }, [onCenterChange]);
 
-  // Called once map is ready and whenever center/radius/filter change
+  // Called once map is ready and whenever center/radius/filter change.
+  // `national` bypasses radius filtering and fetches all of Israel for a single provider.
   const refresh = useCallback(async (
     c: { lat: number; lng: number },
     r: number,
+    national = false,
   ) => {
     if (!mapReady.current || !L.current || !map.current) return;
 
@@ -164,7 +166,7 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
     setTableRows([]);
     setEmptySearch(false);
 
-    if (!nationalModeRef.current) {
+    if (!national) {
       // Draw circle first so we can fitBounds on it
       if (circle.current) circle.current.remove();
       circle.current = L.current.circle([c.lat, c.lng], {
@@ -210,7 +212,7 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
       centerMarker.current.on("dragend", (e: any) => {
         const { lat, lng } = e.target.getLatLng();
         const newCenter = { lat, lng };
-        refresh(newCenter, radiusRef.current);
+        refresh(newCenter, radiusRef.current, false); // dragging always exits national mode
         onCenterChangeRef.current?.(newCenter);
       });
 
@@ -225,8 +227,8 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
     }
 
     // Fetch pins from all providers in parallel (all via server-side proxies to avoid CORS)
-    // National mode: fetch from all of Israel instead of a small radius box
-    const bb = nationalModeRef.current
+    // National mode: fetch all of Israel instead of a small radius box
+    const bb = national
       ? { minLat: 29.5, maxLat: 33.5, minLng: 34.2, maxLng: 35.9 }
       : boundingBox(c.lat, c.lng, r);
     const qs = `minLat=${bb.minLat}&maxLat=${bb.maxLat}&minLng=${bb.minLng}&maxLng=${bb.maxLng}`;
@@ -279,7 +281,7 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
     ]);
     const pins: Pin[] = [...evPins, ...gsPins, ...celloPins, ...afconPins, ...sonolPins, ...scalaPins, ...zenPins, ...energyOnePins];
 
-    const inRadius = nationalModeRef.current
+    const inRadius = national
       ? pins
       : pins.filter((p) => {
           const [lat, lng] = p.geo.split(",").map(Number);
@@ -410,7 +412,7 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
     });
 
     // In national mode: fit the map to all displayed pins
-    if (nationalModeRef.current && visible.length > 0) {
+    if (national && visible.length > 0) {
       const lats = visible.map((p) => Number(p.geo.split(",")[0])).filter((l) => !isNaN(l));
       const lngs = visible.map((p) => Number(p.geo.split(",")[1])).filter((l) => !isNaN(l));
       if (lats.length > 0) {
@@ -565,7 +567,7 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
   useEffect(() => { radiusRef.current = radiusKm; }, [radiusKm]);
 
   useEffect(() => {
-    if (center) refresh(center, radiusKm);
+    if (center) refresh(center, radiusKm, nationalMode ?? false);
   }, [center, radiusKm, filter, provider, nationalMode, refresh]);
 
   // Init Leaflet once
@@ -586,7 +588,7 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
       map.current = m;
       mapReady.current = true;
       // If center already set, refresh now
-      if (centerRef.current) refresh(centerRef.current, radiusRef.current);
+      if (centerRef.current) refresh(centerRef.current, radiusRef.current, nationalModeRef.current ?? false);
     };
 
     if (!document.querySelector("#leaflet-css")) {
