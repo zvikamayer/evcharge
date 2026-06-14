@@ -6,7 +6,7 @@ const CELLO_TOKEN = "150048bf-7667-424e-8923-b1ca8dd0e0fd";
 const CELLO_HEADERS = { Accept: "application/json", Authorization: `Bearer ${CELLO_TOKEN}` };
 
 // Providers with direct integrations — exclude from CelloCharge list to avoid duplication
-const DIRECT_PROVIDER_IDS = new Set(["EvEdge", "Greenspot", "AfconEv", "SonolEvi", "ScalaEv", "ZenEv"]);
+const DIRECT_PROVIDER_IDS = new Set(["EvEdge", "Greenspot", "AfconEv", "SonolEvi", "ScalaEv", "ZenEv", "Lishatech", "LishatechCEL"]);
 
 export interface CelloLocation {
   id: string;

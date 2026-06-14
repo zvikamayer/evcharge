@@ -12,6 +12,7 @@ const STATIC_PROVIDERS = [
   { id: "sonolevi", label: "SonolEvi" },
   { id: "scala", label: "Scala" },
   { id: "zenev", label: "Zen Energy" },
+  { id: "energyone", label: "Energy One" },
 ];
 
 export default function Home() {
