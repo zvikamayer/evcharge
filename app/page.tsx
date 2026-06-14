@@ -5,6 +5,9 @@ import type { CelloProvider } from "@/lib/cellocharge";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
+// Fixed center of Israel used for national-provider-view fetches
+const IL_CENTER = { lat: 31.5, lng: 34.8 };
+
 const STATIC_PROVIDERS = [
   { id: "evedge", label: "EV-Edge" },
   { id: "greenspot", label: "GreenSpot" },
@@ -20,6 +23,8 @@ export default function Home() {
   const [provider, setProvider] = useState("all");
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState(1);
+  // nationalMode = show ALL stations of selected provider across Israel (no radius)
+  const [nationalMode, setNationalMode] = useState(false);
   const [address, setAddress] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState("");
@@ -60,6 +65,7 @@ export default function Home() {
       (pos) => {
         setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setAddress("המיקום שלי");
+        setNationalMode(false);
         setGeoLoading(false);
         setHeaderExpanded(false);
       },
@@ -91,6 +97,7 @@ export default function Home() {
     }
     const data = await res.json();
     setCenter({ lat: data.lat, lng: data.lng });
+    setNationalMode(false);
     setGeoLoading(false);
     setHeaderExpanded(false);
   };
@@ -100,6 +107,21 @@ export default function Home() {
     ...STATIC_PROVIDERS,
     ...celloProviders.map((p) => ({ id: p.id, label: p.name })),
   ];
+
+  /** Toggle a provider. When switching to a specific provider with no location → national mode. */
+  const handleProviderClick = (id: string) => {
+    const next = provider === id && id !== "all" ? "all" : id;
+    setProvider(next);
+    if (next === "all") {
+      setNationalMode(false);
+    } else if (!center) {
+      // No location set → go national automatically
+      setNationalMode(true);
+      setCenter(IL_CENTER);
+      setAddress("כל ישראל");
+    }
+    // If center already set: keep existing mode, user can toggle with the "כל ישראל" button
+  };
 
   return (
     <div className="flex flex-col bg-gray-100" style={{ height: "100dvh" }} dir="rtl">
@@ -146,7 +168,7 @@ export default function Home() {
                 return (
                   <button
                     key={id}
-                    onClick={() => setProvider((cur) => cur === id && id !== "all" ? "all" : id)}
+                    onClick={() => handleProviderClick(id)}
                     className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
                       provider === id
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
@@ -164,6 +186,27 @@ export default function Home() {
                   </button>
                 );
               })}
+              {/* National-mode toggle — only shown when a specific provider is selected */}
+              {provider !== "all" && (
+                <button
+                  onClick={() => {
+                    if (nationalMode) {
+                      setNationalMode(false);
+                    } else {
+                      setNationalMode(true);
+                      setCenter(IL_CENTER);
+                      setAddress("כל ישראל");
+                    }
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all border shrink-0 ${
+                    nationalMode
+                      ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                      : "bg-white text-amber-600 border-amber-300"
+                  }`}
+                >
+                  🗺 כל ישראל
+                </button>
+              )}
             </div>
 
             {/* Search row — RTL order: input (right) → חפש → 📍 (left) */}
@@ -238,10 +281,12 @@ export default function Home() {
           provider={provider}
           center={center}
           radiusKm={radiusKm}
+          nationalMode={nationalMode}
           onPinCounts={setPinCounts}
           onCenterChange={(newCenter) => {
             setCenter(newCenter);
             setAddress("מיקום מותאם");
+            setNationalMode(false);
           }}
         />
 

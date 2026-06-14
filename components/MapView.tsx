@@ -62,11 +62,12 @@ interface Props {
   provider: string;
   center: { lat: number; lng: number } | null;
   radiusKm: number;
+  nationalMode?: boolean;
   onPinCounts?: (counts: Record<string, number>) => void;
   onCenterChange?: (center: { lat: number; lng: number }) => void;
 }
 
-export default function MapView({ filter, provider, center, radiusKm, onPinCounts, onCenterChange }: Props) {
+export default function MapView({ filter, provider, center, radiusKm, nationalMode, onPinCounts, onCenterChange }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapReady = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,6 +143,9 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
   const providerRef = useRef(provider);
   useEffect(() => { providerRef.current = provider; }, [provider]);
 
+  const nationalModeRef = useRef(nationalMode);
+  useEffect(() => { nationalModeRef.current = nationalMode; }, [nationalMode]);
+
   const onPinCountsRef = useRef(onPinCounts);
   useEffect(() => { onPinCountsRef.current = onPinCounts; }, [onPinCounts]);
 
@@ -160,59 +164,65 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     setTableRows([]);
     setEmptySearch(false);
 
-    // Draw circle first so we can fitBounds on it
-    if (circle.current) circle.current.remove();
-    circle.current = L.current.circle([c.lat, c.lng], {
-      radius: r * 1000,
-      color: "#2563eb",
-      fillColor: "#3b82f6",
-      fillOpacity: 0.08,
-      weight: 2,
-    }).addTo(map.current);
+    if (!nationalModeRef.current) {
+      // Draw circle first so we can fitBounds on it
+      if (circle.current) circle.current.remove();
+      circle.current = L.current.circle([c.lat, c.lng], {
+        radius: r * 1000,
+        color: "#2563eb",
+        fillColor: "#3b82f6",
+        fillOpacity: 0.08,
+        weight: 2,
+      }).addTo(map.current);
 
-    // Zoom + pan to fit the radius circle
-    map.current.fitBounds(circle.current.getBounds(), { padding: [24, 24], animate: true });
+      // Zoom + pan to fit the radius circle
+      map.current.fitBounds(circle.current.getBounds(), { padding: [24, 24], animate: true });
 
-    // Center / "you are here" pin — draggable
-    if (centerMarker.current) centerMarker.current.remove();
-    centerMarker.current = L.current.marker([c.lat, c.lng], {
-      icon: L.current.divIcon({
-        className: "",
-        html: `
-          <div style="position:relative;width:32px;height:40px;cursor:grab">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40">
-              <path d="M16 0C9.37 0 4 5.37 4 12c0 9 12 28 12 28S28 21 28 12C28 5.37 22.63 0 16 0z"
-                fill="#1d4ed8" stroke="#fff" stroke-width="1.5"/>
-              <circle cx="16" cy="12" r="5" fill="#fff"/>
-            </svg>
-          </div>`,
-        iconSize: [32, 40],
-        iconAnchor: [16, 40],
-      }),
-      draggable: true,
-      zIndexOffset: 1000,
-    }).addTo(map.current);
+      // Center / "you are here" pin — draggable
+      if (centerMarker.current) centerMarker.current.remove();
+      centerMarker.current = L.current.marker([c.lat, c.lng], {
+        icon: L.current.divIcon({
+          className: "",
+          html: `
+            <div style="position:relative;width:32px;height:40px;cursor:grab">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40">
+                <path d="M16 0C9.37 0 4 5.37 4 12c0 9 12 28 12 28S28 21 28 12C28 5.37 22.63 0 16 0z"
+                  fill="#1d4ed8" stroke="#fff" stroke-width="1.5"/>
+                <circle cx="16" cy="12" r="5" fill="#fff"/>
+              </svg>
+            </div>`,
+          iconSize: [32, 40],
+          iconAnchor: [16, 40],
+        }),
+        draggable: true,
+        zIndexOffset: 1000,
+      }).addTo(map.current);
 
-    // Move circle in real-time while dragging
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    centerMarker.current.on("drag", (e: any) => {
-      const { lat, lng } = e.target.getLatLng();
-      circle.current?.setLatLng([lat, lng]);
-    });
+      // Move circle in real-time while dragging
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      centerMarker.current.on("drag", (e: any) => {
+        const { lat, lng } = e.target.getLatLng();
+        circle.current?.setLatLng([lat, lng]);
+      });
 
-    // On drop — refresh stations at new location
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    centerMarker.current.on("dragend", (e: any) => {
-      const { lat, lng } = e.target.getLatLng();
-      const newCenter = { lat, lng };
-      refresh(newCenter, radiusRef.current);
-      onCenterChangeRef.current?.(newCenter);
-    });
+      // On drop — refresh stations at new location
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      centerMarker.current.on("dragend", (e: any) => {
+        const { lat, lng } = e.target.getLatLng();
+        const newCenter = { lat, lng };
+        refresh(newCenter, radiusRef.current);
+        onCenterChangeRef.current?.(newCenter);
+      });
 
-    centerMarker.current.bindTooltip("גרור לשינוי מיקום", {
-      direction: "top",
-      offset: [0, -44],
-    });
+      centerMarker.current.bindTooltip("גרור לשינוי מיקום", {
+        direction: "top",
+        offset: [0, -44],
+      });
+    } else {
+      // National mode: remove any stale circle / center marker
+      if (circle.current) { circle.current.remove(); circle.current = null; }
+      if (centerMarker.current) { centerMarker.current.remove(); centerMarker.current = null; }
+    }
 
     // Fetch pins from all providers in parallel (all via server-side proxies to avoid CORS)
     const bb = boundingBox(c.lat, c.lng, r);
@@ -266,10 +276,12 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
     ]);
     const pins: Pin[] = [...evPins, ...gsPins, ...celloPins, ...afconPins, ...sonolPins, ...scalaPins, ...zenPins, ...energyOnePins];
 
-    const inRadius = pins.filter((p) => {
-      const [lat, lng] = p.geo.split(",").map(Number);
-      return haversineKm(c.lat, c.lng, lat, lng) <= r;
-    });
+    const inRadius = nationalModeRef.current
+      ? pins
+      : pins.filter((p) => {
+          const [lat, lng] = p.geo.split(",").map(Number);
+          return haversineKm(c.lat, c.lng, lat, lng) <= r;
+        });
 
     // Emit per-provider counts for filter buttons
     if (onPinCountsRef.current) {
@@ -393,6 +405,18 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
       });
       } catch {/* skip pins that fail to render */}
     });
+
+    // In national mode: fit the map to all displayed pins
+    if (nationalModeRef.current && visible.length > 0) {
+      const lats = visible.map((p) => Number(p.geo.split(",")[0])).filter((l) => !isNaN(l));
+      const lngs = visible.map((p) => Number(p.geo.split(",")[1])).filter((l) => !isNaN(l));
+      if (lats.length > 0) {
+        map.current.fitBounds(
+          [[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]],
+          { padding: [32, 32], animate: true },
+        );
+      }
+    }
 
     // ── Build price table ────────────────────────────────────────────────────
     // Strategy:
@@ -539,7 +563,7 @@ export default function MapView({ filter, provider, center, radiusKm, onPinCount
 
   useEffect(() => {
     if (center) refresh(center, radiusKm);
-  }, [center, radiusKm, filter, provider, refresh]);
+  }, [center, radiusKm, filter, provider, nationalMode, refresh]);
 
   // Init Leaflet once
   useEffect(() => {
