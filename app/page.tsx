@@ -114,13 +114,19 @@ export default function Home() {
     setProvider(next);
     if (next === "all") {
       setNationalMode(false);
-    } else if (!center) {
-      // No location set → go national automatically
+      // If we were in national mode (center was IL_CENTER, no real user location),
+      // reset to the initial "pick a location" state so the map isn't stuck.
+      if (nationalMode) {
+        setCenter(null);
+        setAddress("");
+        setHeaderExpanded(true);
+      }
+    } else if (!center || nationalMode) {
+      // No real location (or switching between national-mode providers) → stay national
       setNationalMode(true);
       setCenter(IL_CENTER);
       setAddress("כל ישראל");
     }
-    // If center already set: keep existing mode, user can toggle with the "כל ישראל" button
   };
 
   return (
