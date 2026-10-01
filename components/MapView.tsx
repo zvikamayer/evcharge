@@ -590,8 +590,8 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
       const Lref = (window as any).L;
       L.current = Lref;
       const m = Lref.map(mapRef.current).setView([32.08, 34.78], 13);
-      Lref.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+      Lref.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         subdomains: "abcd",
         maxZoom: 20,
       }).addTo(m);
