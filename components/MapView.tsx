@@ -592,8 +592,8 @@ export default function MapView({ filter, provider, center, radiusKm, nationalMo
       const m = Lref.map(mapRef.current).setView([32.08, 34.78], 13);
       Lref.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        subdomains: "abcd",
-        maxZoom: 20,
+        subdomains: "abc",
+        maxZoom: 19,
       }).addTo(m);
       map.current = m;
       mapReady.current = true;
